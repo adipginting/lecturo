@@ -6,7 +6,7 @@ class ChatRepository(private val db: LecturoDatabase) {
     private val conversations = db.conversationDao()
     private val messages = db.messageDao()
     private val prompts = db.promptDao()
-    private val basket = db.basketDao()
+    private val saved = db.savedDao()
 
     fun observeConversations(): Flow<List<ConversationEntity>> = conversations.observeAll()
 
@@ -25,14 +25,18 @@ class ChatRepository(private val db: LecturoDatabase) {
         promptId: Long?,
         customPrompt: String? = null,
         contextText: String? = null,
+        docTitle: String? = null,
+        docLocator: String? = null,
     ): Long =
         conversations.insert(
             ConversationEntity(
-                title = "New conversation",
+                title = ConversationTitle.UNTITLED,
                 providerId = providerId,
                 promptId = promptId,
                 customPrompt = customPrompt?.takeIf { it.isNotBlank() },
                 contextText = contextText?.takeIf { it.isNotBlank() },
+                docTitle = docTitle?.takeIf { it.isNotBlank() },
+                docLocator = docLocator?.takeIf { it.isNotBlank() },
             ),
         )
 
@@ -41,12 +45,25 @@ class ChatRepository(private val db: LecturoDatabase) {
         conversations.touch(conversationId, System.currentTimeMillis())
     }
 
+    /** Renames a conversation. A name with nothing in it is refused. */
+    suspend fun rename(conversationId: Long, title: String) {
+        ConversationTitle.normalize(title)?.let { conversations.rename(conversationId, it) }
+    }
+
+    /**
+     * Names a conversation after its first message, which is the only chance it
+     * gets: a name the user has set is left alone.
+     */
     suspend fun renameIfUntitled(conversationId: Long, firstMessage: String) {
         val conversation = conversations.get(conversationId) ?: return
-        if (conversation.title == "New conversation") {
-            conversations.rename(conversationId, firstMessage.take(40))
+        if (conversation.title == ConversationTitle.UNTITLED) {
+            ConversationTitle.fromMessage(firstMessage)
+                ?.let { conversations.rename(conversationId, it) }
         }
     }
+
+    suspend fun setProvider(conversationId: Long, providerId: String) =
+        conversations.setProvider(conversationId, providerId)
 
     suspend fun savePrompt(prompt: PromptEntity): Long = prompts.upsert(prompt)
 
@@ -60,7 +77,7 @@ class ChatRepository(private val db: LecturoDatabase) {
     /**
      * System prompt for a conversation: the prompt locked at start (saved
      * prompt by id, else the one-off custom prompt) plus the frozen excerpt
-     * stored on the conversation, if any. The live basket is no longer injected.
+     * stored on the conversation, if any. The live saved is no longer injected.
      */
     suspend fun buildSystemPrompt(conversation: ConversationEntity): String {
         val promptBody = conversation.promptId?.let { prompts.get(it)?.body }

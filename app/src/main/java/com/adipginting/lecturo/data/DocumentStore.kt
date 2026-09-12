@@ -45,8 +45,13 @@ interface DocumentDao {
     suspend fun delete(ids: List<String>)
 }
 
+/**
+ * The table keeps its original name: renaming it would need a v7 migration for
+ * no functional gain, and the feature's rename to "Saved" is UI- and
+ * code-level only.
+ */
 @Entity(tableName = "basket_items")
-data class BasketItemEntity(
+data class SavedItemEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val docId: String,
     val text: String,
@@ -55,23 +60,24 @@ data class BasketItemEntity(
     val createdAt: Long = System.currentTimeMillis(),
 )
 
-/** Basket item joined with its document's title for display. */
-data class BasketRow(
-    @androidx.room.Embedded val item: BasketItemEntity,
+/** Saved item joined with its document's title and format for display. */
+data class SavedRow(
+    @androidx.room.Embedded val item: SavedItemEntity,
     val docTitle: String?,
+    val docFormat: String?,
 )
 
 @Dao
-interface BasketDao {
+interface SavedDao {
     @Query(
-        "SELECT basket_items.*, documents.title AS docTitle FROM basket_items " +
+        "SELECT basket_items.*, documents.title AS docTitle, documents.format AS docFormat FROM basket_items " +
             "LEFT JOIN documents ON documents.id = basket_items.docId " +
             "ORDER BY basket_items.createdAt DESC",
     )
-    fun observeAllWithTitles(): Flow<List<BasketRow>>
+    fun observeAllWithTitles(): Flow<List<SavedRow>>
 
     @Insert
-    suspend fun insert(item: BasketItemEntity)
+    suspend fun insert(item: SavedItemEntity)
 
     @Query("DELETE FROM basket_items WHERE id = :id")
     suspend fun delete(id: Long)
@@ -83,11 +89,11 @@ interface BasketDao {
     suspend fun clear()
 
     @Query(
-        "SELECT basket_items.*, documents.title AS docTitle FROM basket_items " +
+        "SELECT basket_items.*, documents.title AS docTitle, documents.format AS docFormat FROM basket_items " +
             "LEFT JOIN documents ON documents.id = basket_items.docId " +
             "ORDER BY basket_items.createdAt",
     )
-    suspend fun allWithTitles(): List<BasketRow>
+    suspend fun allWithTitles(): List<SavedRow>
 }
 
 @Entity(tableName = "conversations")
@@ -99,8 +105,11 @@ data class ConversationEntity(
     val promptId: Long? = null,
     /** One-off prompt typed at conversation start, when no saved prompt is used. */
     val customPrompt: String? = null,
-    /** Excerpt fired from the basket/reader to seed this conversation's context. */
+    /** Excerpt fired from the saved text or the reader to seed this conversation's context. */
     val contextText: String? = null,
+    /** Document title and locator (page/href) captured when the draft was sent. */
+    val docTitle: String? = null,
+    val docLocator: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )
@@ -135,6 +144,9 @@ interface ConversationDao {
 
     @Query("UPDATE conversations SET title = :title WHERE id = :id")
     suspend fun rename(id: Long, title: String)
+
+    @Query("UPDATE conversations SET providerId = :providerId WHERE id = :id")
+    suspend fun setProvider(id: Long, providerId: String)
 
     @Query("UPDATE conversations SET updatedAt = :updatedAt WHERE id = :id")
     suspend fun touch(id: Long, updatedAt: Long)
@@ -176,17 +188,17 @@ interface PromptDao {
 @Database(
     entities = [
         DocumentEntity::class,
-        BasketItemEntity::class,
+        SavedItemEntity::class,
         ConversationEntity::class,
         MessageEntity::class,
         PromptEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class LecturoDatabase : RoomDatabase() {
     abstract fun documentDao(): DocumentDao
-    abstract fun basketDao(): BasketDao
+    abstract fun savedDao(): SavedDao
     abstract fun conversationDao(): ConversationDao
     abstract fun messageDao(): MessageDao
     abstract fun promptDao(): PromptDao
@@ -241,13 +253,20 @@ abstract class LecturoDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docTitle` TEXT")
+                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docLocator` TEXT")
+            }
+        }
+
         fun get(context: Context): LecturoDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     LecturoDatabase::class.java,
                     "lecturo.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build().also { instance = it }
             }
     }

@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.adipginting.lecturo.data.BasketRepository
+import com.adipginting.lecturo.data.SavedRepository
 import com.adipginting.lecturo.data.ChatRepository
 import com.adipginting.lecturo.data.LecturoDatabase
 import com.adipginting.lecturo.data.PromptEntity
@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 
 class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = ChatRepository(LecturoDatabase.get(app))
-    private val basketRepo = BasketRepository(LecturoDatabase.get(app))
+    private val savedRepo = SavedRepository(LecturoDatabase.get(app))
     private val settings = ChatSettings(app)
 
     /** Snapshot of the draft payload; cleared from the holder on first access. */
@@ -85,6 +85,8 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
                     promptId = null,
                     customPrompt = null,
                     contextText = draft.text,
+                    docTitle = draft.docTitle,
+                    docLocator = draft.locator,
                 )
                 repo.addMessage(conversationId, "user", text.trim())
                 repo.renameIfUntitled(conversationId, text.trim())
@@ -101,7 +103,7 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
                     .map { ChatMessage(it.role, it.text) }
                 val reply = provider.chat(repo.buildSystemPrompt(conversation), history)
                 repo.addMessage(conversationId, "assistant", reply)
-                draft.basketItemId?.let { basketRepo.remove(it) }
+                draft.savedItemId?.let { savedRepo.remove(it) }
                 sentConversationId = conversationId
             } catch (e: Exception) {
                 error = e.message ?: "Chat failed"
@@ -171,7 +173,13 @@ fun DraftChatScreen(
                     ) {
                         items(prompts, key = { it.id }) { prompt ->
                             AssistChip(
-                                onClick = { input = appendPrompt(input, prompt.body) },
+                                onClick = {
+                                    // One tap: whatever is already typed plus this
+                                    // prompt goes out as the message.
+                                    val message = appendPrompt(input, prompt.body)
+                                    input = ""
+                                    vm.send(message)
+                                },
                                 label = { Text(prompt.title) },
                             )
                         }
@@ -227,13 +235,14 @@ private fun ContextBanner(
             .clickable(onClick = onToggle),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = draft.text,
+            com.adipginting.lecturo.util.MarkdownText(
+                markdown = draft.text,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = if (expanded) Int.MAX_VALUE else 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            val meta = listOfNotNull(draft.docTitle, draft.locator).joinToString(" · ")
+            val pageLabel = draft.locator?.toIntOrNull()?.takeIf { it > 0 }?.let { "Page $it" }
+            val meta = listOfNotNull(draft.docTitle, pageLabel).joinToString(" · ")
             if (meta.isNotEmpty()) {
                 Text(
                     text = meta,

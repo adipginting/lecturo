@@ -19,7 +19,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
-import com.adipginting.lecturo.ui.theme.Cache
+import com.adipginting.lecturo.ui.theme.Saved
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -108,7 +108,7 @@ class LibraryViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun LibraryScreen(
     onOpenDocument: (String) -> Unit,
-    onOpenBasket: () -> Unit = {},
+    onOpenSaved: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
     sharedUrl: String? = null,
     onSharedUrlConsumed: () -> Unit = {},
@@ -155,10 +155,10 @@ fun LibraryScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text("lecturo") },
+                    title = { Text("Lecturo") },
                     actions = {
-                        IconButton(onClick = onOpenBasket) {
-                            Icon(Icons.Default.Cache, contentDescription = "Basket")
+                        IconButton(onClick = onOpenSaved) {
+                            Icon(Icons.Default.Saved, contentDescription = "Saved")
                         }
                         if (selectedTab == 0) {
                             IconButton(onClick = { showDownloadDialog = true }) {
@@ -350,18 +350,27 @@ private fun DocumentRow(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            CoverThumb(
+                bitmap = localCoverBitmap(doc),
+                title = doc.title,
+                modifier = Modifier.padding(end = 12.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(doc.title, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    text = buildString {
-                        append(doc.format.uppercase())
-                        doc.lastLocator?.let { locator ->
-                            append(" · ")
-                            append(
-                                if (doc.format == "pdf") "page $locator" else locator,
-                            )
-                        }
-                    },
+                    text = listOfNotNull(
+                        doc.format.uppercase(),
+                        doc.lastLocator?.takeIf { it.isNotBlank() }?.let { raw ->
+                            when {
+                                doc.format == "pdf" -> "page $raw"
+                                // EPUB locators are Readium JSON; show the chapter.
+                                raw.startsWith("{") -> runCatching {
+                                    org.json.JSONObject(raw).optString("title")
+                                }.getOrNull()?.takeIf { it.isNotBlank() }
+                                else -> raw
+                            }
+                        },
+                    ).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

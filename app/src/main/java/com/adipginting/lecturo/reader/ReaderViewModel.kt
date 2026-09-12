@@ -1,7 +1,6 @@
 package com.adipginting.lecturo.reader
 
 import android.app.Application
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,11 +8,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.adipginting.lecturo.chat.ChatSettings
 import com.adipginting.lecturo.chat.providerDisplayName
-import com.adipginting.lecturo.data.BasketRepository
+import com.adipginting.lecturo.data.SavedRepository
 import com.adipginting.lecturo.data.ChatRepository
 import com.adipginting.lecturo.data.LecturoDatabase
 import com.adipginting.lecturo.data.DocumentEntity
 import com.adipginting.lecturo.data.DocumentRepository
+import com.adipginting.lecturo.library.BookFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URLEncoder
 
 class ReaderViewModel(
     app: Application,
@@ -32,7 +31,10 @@ class ReaderViewModel(
         val loading: Boolean = true,
         val title: String = "",
         val format: String = "",
-        val url: String? = null,
+        val pdfFile: File? = null,
+        val pdfInitialPage: Int = 0,
+        val epubFile: File? = null,
+        val epubInitialLocator: String? = null,
         val error: String? = null,
     )
 
@@ -47,7 +49,7 @@ class ReaderViewModel(
         private set
 
     private val repo = DocumentRepository(app, LecturoDatabase.get(app))
-    private val basketRepo = BasketRepository(LecturoDatabase.get(app))
+    private val savedRepo = SavedRepository(LecturoDatabase.get(app))
     private val chatRepo = ChatRepository(LecturoDatabase.get(app))
     private val chatSettings = ChatSettings(app)
 
@@ -60,8 +62,8 @@ class ReaderViewModel(
     var selectedProviderId by mutableStateOf("openai")
         private set
 
-    /** Most recent locator reported by the WebView; seeds basket items. */
-    private var currentLocator: String? = null
+    /** Most recent locator from the active reader; seeds saved items. */
+    private var currentLocator by mutableStateOf<String?>(null)
 
     init {
         viewModelScope.launch { load() }
@@ -72,7 +74,7 @@ class ReaderViewModel(
     }
 
     private suspend fun refreshProviderOptions() {
-        providerOptions = listOf("openai", "kimi", "openrouter", "anthropic").map { id ->
+        providerOptions = listOf("openai", "kimi", "openrouter", "deepseek", "anthropic").map { id ->
             val settings = chatSettings.settingsFor(id).first()
             val model = settings.model.ifBlank { null }
             ProviderOption(
@@ -95,13 +97,38 @@ class ReaderViewModel(
             return
         }
         currentLocator = doc.lastLocator
+        // The library row says what the file should be; the file's own bytes
+        // are asked before a reader is handed it, so a page saved under a book
+        // name is reported as one instead of surfacing as a failed open.
+        val file = File(File(getApplication<Application>().filesDir, "documents"), doc.fileName)
+        val problem = withContext(Dispatchers.IO) { BookFile.problem(file) }
+        if (problem != null) {
+            uiState = UiState(loading = false, title = doc.title, format = doc.format, error = problem)
+            return
+        }
         try {
-            val url = when (doc.format) {
-                "pdf" -> buildPdfUrl(doc)
-                "epub" -> buildEpubUrl(doc)
+            when (doc.format) {
+                "pdf" -> {
+                    val page = pdfStartPage(doc)
+                    uiState = UiState(
+                        loading = false,
+                        title = doc.title,
+                        format = "pdf",
+                        pdfFile = file,
+                        pdfInitialPage = page - 1,
+                    )
+                }
+                "epub" -> uiState = UiState(
+                    loading = false,
+                    title = doc.title,
+                    format = "epub",
+                    epubFile = file,
+                    // Raw stored locator: either Readium JSON or a legacy spine
+                    // href, which the reader migrates onto the reading order.
+                    epubInitialLocator = doc.lastLocator?.trim()?.takeIf { it.isNotBlank() },
+                )
                 else -> throw IllegalArgumentException("Unknown format ${doc.format}")
             }
-            uiState = UiState(loading = false, title = doc.title, format = doc.format, url = url)
         } catch (e: Exception) {
             uiState = UiState(loading = false, error = e.message ?: "Failed to open document")
         }
@@ -113,16 +140,16 @@ class ReaderViewModel(
     }
 
     /**
-     * Adds selected text to the basket. [pageHint] is the PDF page read from
+     * Adds selected text to the saved. [pageHint] is the PDF page read from
      * the selection's DOM ancestor when available; otherwise the current
      * locator (last PDF page / current EPUB spine href) is used.
      */
-    fun addToBasket(text: String, pageHint: String?) {
+    fun addToSaved(text: String, pageHint: String?) {
         val locator = when (uiState.format) {
             "pdf" -> pageHint ?: currentLocator
             else -> currentLocator
         }
-        viewModelScope.launch(Dispatchers.IO) { basketRepo.add(docId, text, locator) }
+        viewModelScope.launch(Dispatchers.IO) { savedRepo.add(docId, text, locator) }
     }
 
     /** Resolves a selection's locator using the current format and last-known position. */
@@ -131,33 +158,10 @@ class ReaderViewModel(
         else -> currentLocator
     }
 
-    private fun buildPdfUrl(doc: DocumentEntity): String {
-        val fileUrl = URLEncoder.encode("$ASSET_ORIGIN/doc/${doc.fileName}", "UTF-8")
-        val page = doc.lastLocator?.toIntOrNull()?.takeIf { it > 0 }
-        // No pagechanging event fires until the user scrolls; seed the
-        // locator so basket items added on the first visible page get one.
-        currentLocator = (page ?: 1).toString()
-
-        return "$ASSET_ORIGIN/assets/pdfjs/web/viewer.html?file=$fileUrl" +
-            (page?.let { "#page=$it" } ?: "")
-
-    }
-
-    private suspend fun buildEpubUrl(doc: DocumentEntity): String = withContext(Dispatchers.IO) {
-        val ctx = getApplication<Application>()
-        val epubFile = File(File(ctx.filesDir, "documents"), doc.fileName)
-        val book = EpubBook.open(epubFile, File(ctx.filesDir, "epub"))
-        val startHref = book.startHref(doc.lastLocator)
-        // The initial loadUrl does not pass through shouldOverrideUrlLoading,
-        // so seed the locator with the href we are about to display.
-        currentLocator = startHref
-        "$ASSET_ORIGIN/epub/${epubFile.nameWithoutExtension}/${encodePath(startHref)}"
-    }
-
-    companion object {
-        const val ASSET_ORIGIN = "https://appassets.androidplatform.net"
-
-        fun encodePath(path: String): String =
-            path.split('/').joinToString("/") { Uri.encode(it) }
+    /** 1-based page to open at; also seeds the locator for the first saved item. */
+    private fun pdfStartPage(doc: DocumentEntity): Int {
+        val page = doc.lastLocator?.toIntOrNull()?.takeIf { it > 0 } ?: 1
+        currentLocator = page.toString()
+        return page
     }
 }

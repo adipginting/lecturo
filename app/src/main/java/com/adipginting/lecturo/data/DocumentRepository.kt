@@ -15,7 +15,7 @@ class DocumentRepository(private val context: Context, private val db: LecturoDa
     suspend fun saveLocator(id: String, locator: String) =
         dao.updateLocator(id, locator, System.currentTimeMillis())
 
-    /** Deletes the local copies: files on disk, EPUB unpack dirs, basket rows, DB rows. */
+    /** Deletes the local copies: files on disk, EPUB unpack dirs, saved rows, DB rows. */
     suspend fun remove(docs: List<DocumentEntity>) {
         if (docs.isEmpty()) return
         val docsDir = File(context.filesDir, "documents")
@@ -26,7 +26,7 @@ class DocumentRepository(private val context: Context, private val db: LecturoDa
                 File(epubDir, doc.fileName.substringBeforeLast('.')).deleteRecursively()
             }
         }
-        db.basketDao().deleteByDocIds(docs.map { it.id })
+        db.savedDao().deleteByDocIds(docs.map { it.id })
         dao.delete(docs.map { it.id })
     }
 }

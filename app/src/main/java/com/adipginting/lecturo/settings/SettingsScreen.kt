@@ -135,8 +135,14 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    val maxSavedPrompts = 12
+
     fun savePrompt(id: Long?, title: String, body: String) {
         viewModelScope.launch {
+            if (id == null && prompts.value.size >= maxSavedPrompts) {
+                savedNotice = "Maximum $maxSavedPrompts saved prompts"
+                return@launch
+            }
             repo.savePrompt(PromptEntity(id = id ?: 0, title = title.trim(), body = body.trim()))
         }
     }
@@ -221,9 +227,25 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f),
                     )
+                    if (prompts.size >= vm.maxSavedPrompts) {
+                        Text(
+                            "${prompts.size}/${vm.maxSavedPrompts}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    }
                     IconButton(onClick = {
-                        editingPrompt = null
-                        showPromptDialog = true
+                        if (prompts.size >= vm.maxSavedPrompts) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Maximum ${vm.maxSavedPrompts} saved prompts",
+                                android.widget.Toast.LENGTH_SHORT,
+                            ).show()
+                        } else {
+                            editingPrompt = null
+                            showPromptDialog = true
+                        }
                     }) {
                         Icon(Icons.Default.Add, contentDescription = "Add prompt")
                     }

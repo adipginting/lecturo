@@ -14,12 +14,12 @@ class AnthropicProviderTest {
     @Test
     fun `request body uses top-level system and max_tokens`() {
         val body = provider.buildRequestBody(
-            "Basket context.",
+            "Saved context.",
             listOf(ChatMessage("user", "summarize")),
         )
         assertEquals(
             """{"model":"claude-sonnet-4-5","max_tokens":1024,""" +
-                """"system":"Basket context.",""" +
+                """"system":"Saved context.",""" +
                 """"messages":[{"role":"user","content":"summarize"}]}""",
             body,
         )

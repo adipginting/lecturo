@@ -11,8 +11,8 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * OpenAI-compatible chat-completions client shared by OpenAI and Kimi; only
- * the base URL, key, and model differ. [id] is "openai" or "kimi".
+ * OpenAI-compatible chat-completions client shared by OpenAI, Kimi,
+ * OpenRouter, and DeepSeek; only the base URL, key, and model differ.
  */
 class OpenAiCompatibleProvider(
     override val id: String,

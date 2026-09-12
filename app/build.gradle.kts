@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.adipginting.lecturo"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -39,13 +39,33 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
     buildFeatures {
         compose = true
     }
 }
 
+// Readium's transitive Compose/Fragment versions require compileSdk 37; pin them
+// to the newest releases that still build against 36.
+configurations.all {
+    resolutionStrategy {
+        force(
+            "androidx.fragment:fragment-compose:1.8.9",
+            "androidx.lifecycle:lifecycle-runtime-compose:2.9.4",
+            "androidx.lifecycle:lifecycle-runtime-compose-android:2.9.4",
+            "androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4",
+            "androidx.lifecycle:lifecycle-viewmodel-compose-android:2.9.4",
+        )
+    }
+}
+
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+    implementation(libs.readium.shared)
+    implementation(libs.readium.streamer)
+    implementation(libs.readium.navigator)
+    implementation(libs.androidx.fragment.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
@@ -60,6 +80,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.webkit)
+    implementation(libs.androidx.pdf.document.service)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)

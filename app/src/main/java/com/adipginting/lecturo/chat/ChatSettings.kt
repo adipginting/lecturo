@@ -58,6 +58,7 @@ class ChatSettings(private val context: Context) {
             "openai" -> "https://api.openai.com/v1"
             "kimi" -> "https://api.moonshot.cn/v1"
             "openrouter" -> "https://openrouter.ai/api/v1"
+            "deepseek" -> "https://api.deepseek.com"
             "anthropic" -> "https://api.anthropic.com"
             else -> ""
         }
@@ -66,6 +67,7 @@ class ChatSettings(private val context: Context) {
             "openai" -> "gpt-4o-mini"
             "kimi" -> "moonshot-v1-8k"
             "openrouter" -> "openai/gpt-4o-mini"
+            "deepseek" -> "deepseek-chat"
             "anthropic" -> "claude-sonnet-4-5"
             else -> ""
         }
@@ -73,7 +75,7 @@ class ChatSettings(private val context: Context) {
         /** Builds the configured provider instance, applying default endpoints. */
         fun buildProvider(providerId: String, settings: ProviderSettings): ChatProvider =
             when (providerId) {
-                "openai", "kimi", "openrouter" -> OpenAiCompatibleProvider(
+                "openai", "kimi", "openrouter", "deepseek" -> OpenAiCompatibleProvider(
                     id = providerId,
                     baseUrl = settings.baseUrl.ifBlank { defaultBaseUrl(providerId) },
                     apiKey = settings.apiKey,

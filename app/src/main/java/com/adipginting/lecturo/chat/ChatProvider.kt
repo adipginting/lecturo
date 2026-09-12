@@ -8,14 +8,14 @@ data class ChatMessage(val role: String, val text: String)
  * becomes a `Flow<String>` return without touching call sites' message model.
  */
 interface ChatProvider {
-    /** Stable id persisted on conversations: "openai", "kimi", "anthropic", "copilot". */
+    /** Stable id persisted on conversations; see [ALL_PROVIDER_IDS]. */
     val id: String
     val displayName: String
 
     /** False until the required settings (API key, ...) are entered. */
     val isConfigured: Boolean
 
-    /** [system] carries the saved prompt plus serialized basket contents. */
+    /** [system] carries the saved prompt plus serialized saved contents. */
     suspend fun chat(system: String, messages: List<ChatMessage>): String
 }
 
@@ -29,12 +29,14 @@ class CopilotProvider : ChatProvider {
         throw UnsupportedOperationException("GitHub Copilot chat is not yet supported")
 }
 
-val ALL_PROVIDER_IDS = listOf("openai", "kimi", "openrouter", "anthropic", "copilot")
+val ALL_PROVIDER_IDS =
+    listOf("openai", "kimi", "openrouter", "deepseek", "anthropic", "copilot")
 
 fun providerDisplayName(id: String): String = when (id) {
     "openai" -> "OpenAI"
     "kimi" -> "Kimi"
     "openrouter" -> "OpenRouter"
+    "deepseek" -> "DeepSeek"
     "anthropic" -> "Anthropic Claude"
     "copilot" -> "GitHub Copilot"
     else -> id

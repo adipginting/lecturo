@@ -14,8 +14,14 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Lecturo">
+        <!-- Readium builds its EPUB navigator through a FragmentFactory and does
+             not support being restored by Android, so a configuration change
+             that recreates the activity crashed the app mid-book. The activity
+             handles those changes itself: Compose follows the new
+             configuration, and the reader keeps its place. -->
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|fontScale|uiMode|colorMode|locale|layoutDirection"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"

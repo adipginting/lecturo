@@ -5,8 +5,6 @@ import com.adipginting.lecturo.data.DocumentEntity
 import com.adipginting.lecturo.data.DocumentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.util.UUID
 
@@ -18,33 +16,25 @@ class DocumentDownloader(
     private val context: Context,
     private val repo: DocumentRepository,
 ) {
-    private val client = OkHttpClient()
+    private val fetch = BookFetch()
 
     suspend fun download(
         url: String,
         headers: Map<String, String> = emptyMap(),
         title: String? = null,
     ): DocumentEntity = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(url).apply {
-            headers.forEach { (name, value) -> header(name, value) }
-        }.build()
-        val response = client.newCall(request).execute()
-        response.use { resp ->
-            if (!resp.isSuccessful) throw IllegalArgumentException("HTTP ${resp.code}")
-            val body = resp.body ?: throw IllegalArgumentException("Empty response")
-            val format = formatFor(resp.header("Content-Type"), url)
-                ?: throw IllegalArgumentException("Not a PDF or EPUB: $url")
+        fetch.fetch(url, headers).use { book ->
             val id = UUID.randomUUID().toString()
-            val fileName = "$id.$format"
+            val fileName = "$id.${book.format}"
             val dir = File(context.filesDir, "documents").apply { mkdirs() }
-            body.byteStream().use { input ->
+            book.body.byteStream().use { input ->
                 File(dir, fileName).outputStream().use { output -> input.copyTo(output) }
             }
             val doc = DocumentEntity(
                 id = id,
-                title = title ?: titleFor(url),
+                title = title ?: titleFor(book.url),
                 fileName = fileName,
-                format = format,
+                format = book.format,
             )
             repo.add(doc)
             doc
@@ -52,17 +42,6 @@ class DocumentDownloader(
     }
 
     companion object {
-        internal fun formatFor(contentType: String?, url: String): String? {
-            val mime = contentType?.substringBefore(';')?.trim()?.lowercase()
-            return when {
-                mime == "application/pdf" -> "pdf"
-                mime == "application/epub+zip" -> "epub"
-                url.substringBefore('?').endsWith(".pdf", ignoreCase = true) -> "pdf"
-                url.substringBefore('?').endsWith(".epub", ignoreCase = true) -> "epub"
-                else -> null
-            }
-        }
-
         internal fun titleFor(url: String): String =
             url.substringBefore('?').substringAfterLast('/')
                 .substringBeforeLast('.')

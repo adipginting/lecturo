@@ -39,6 +39,13 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
+androidx-pdf-viewer = { group = "androidx.pdf", name = "pdf-viewer", version = "1.0.0-beta01" }
+androidx-pdf-document-service = { group = "androidx.pdf", name = "pdf-document-service", version = "1.0.0-beta01" }
+readium-shared = { group = "org.readium.kotlin-toolkit", name = "readium-shared", version = "3.3.0" }
+readium-streamer = { group = "org.readium.kotlin-toolkit", name = "readium-streamer", version = "3.3.0" }
+readium-navigator = { group = "org.readium.kotlin-toolkit", name = "readium-navigator", version = "3.3.0" }
+androidx-fragment-compose = { group = "androidx.fragment", name = "fragment-compose", version = "1.8.9" }
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.5" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }

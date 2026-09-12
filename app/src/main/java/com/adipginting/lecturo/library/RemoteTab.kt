@@ -231,6 +231,11 @@ private fun RemoteItemRow(item: RemoteItem, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            CoverThumb(
+                bitmap = null,
+                title = item.title,
+                modifier = Modifier.padding(end = 12.dp),
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(item.title, style = MaterialTheme.typography.titleMedium)
                 Text(

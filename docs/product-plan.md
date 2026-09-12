@@ -1,165 +1,170 @@
-# lecturo — Product & Architecture Plan (platform-neutral)
+# Lecturo — Product & Feature Plan
 
-Purpose of this document: enough detail to generate a **desktop version** of
-lecturo without reference to the Android codebase. It describes *what* the app
-does and the settled design decisions; platform-specific choices (UI toolkit,
-storage, keychain) are left as explicit decision points with a recommended
-default.
+What the app does, and what "done" means for each feature. Kept portable on
+purpose: the features and their acceptance criteria shouldn't depend on which
+platform implements them.
+
+The rendering stack as it stands is **Android-specific** — see §3 — so this
+document describes the behaviour and the seams, not the widgets. The living
+architecture record, including the current constraints, is
+[architecture.md](architecture.md).
 
 ## 1. What the app is
 
-lecturo is a personal document reader for **PDF and EPUB** files, built around
-one idea: while reading, you select interesting text into a **basket** — a
-queue of excerpts waiting to be asked about. Tapping a basket item fires it
-into its own LLM conversation that knows that excerpt as its frozen context.
+A personal document reader for **PDF and EPUB**, built around one idea: while
+reading, you select interesting text into **Saved** — a queue of excerpts
+waiting to be asked about. Tapping a saved item fires it into its own LLM
+conversation that knows that excerpt as its frozen context.
 
-## 2. Feature list with acceptance criteria
+## 2. Features with acceptance criteria
 
 ### F1 — Reading
 - Open and render PDF files with smooth continuous scrolling.
-- Open and render EPUB files (spine order, working internal links).
-- Restore last-read position per document on reopen
-  (PDF: page number; EPUB: spine item + anchor).
-- **Done when**: a multi-page PDF and a multi-chapter EPUB both open, scroll,
-  follow links, and resume where left off after closing and reopening.
+- Open and render EPUB files in continuous scroll mode, following the
+  publication's own reading order.
+- Restore the last-read position per document on reopen.
+- **Done when**: a multi-page PDF and a multi-chapter EPUB both open, scroll, and
+  resume where they were left after closing and reopening.
 
 ### F2 — Sources
-- Import documents from the local file system. **Import = copy** into the
-  app's own storage; the app owns its library.
+- Import documents from the local file system. **Import = copy** into the app's
+  own storage; the app owns its library.
 - Download a document from a web URL (in-app URL field).
-- Accept documents sent from other apps (on desktop: drag-and-drop and/or
-  "open with" file association).
-- **Remove documents**: delete a document's local copy (per-item or
-  multi-select) from the app-owned storage. Deletion is local-only — remote
-  Calibre/Zotero libraries are never modified. (Remote downloads are full
-  local copies; once downloaded, a document is independent of its source.)
+- A download is judged by its payload, not by its URL. Download gateways — pages
+  served in place of the file, as Standard Ebooks serves — are followed to the
+  real file; whatever is still not a PDF or an EPUB is refused by name and never
+  enters the library. A file picked from disk gets the same check before it is
+  copied in.
+- Accept documents sent from other apps.
+- **Remove documents**: delete the local copy, per-item or multi-select.
+  Deletion is local-only — remote Calibre/Zotero libraries are never modified.
 - **Done when**: a file picked from disk and a file fetched from a URL both
-  appear in the library and open, and a deleted document's file and library
-  entry are gone.
+  appear in the library and open, a URL that answers with a web page says so
+  instead of adding a broken book, and a deleted document's file and library
+  entry are both gone.
 
 ### F3 — Remote library sync
 - Two remote sources behind one interface:
   `browse() / search() / download()` returning library items.
   - **Calibre**: its Content Server speaks **OPDS** (Atom/XML catalog).
-  - **Zotero**: the **Web API** (`https://api.zotero.org`, REST/JSON,
-    per-user API key).
-- Manual sync only (a sync button / pull-to-refresh); no background sync.
-- A failing source surfaces its error inline and never blocks the others;
-  local data is always kept.
+  - **Zotero**: the **Web API** (`https://api.zotero.org`, REST/JSON, per-user
+    API key).
+- Manual sync only (a sync button); no background sync.
+- A failing source surfaces its error inline and never blocks the others; local
+  data is always kept.
 - Library UI: one screen, three tabs — Local / Calibre / Zotero.
 - **Done when**: both servers' catalogs list in the UI and an item from each
   downloads into local storage and opens.
 
-### F4 — Basket
-- Selecting text in any open document offers **"Add to basket"** (custom item
-  in the platform's native selection menu).
-- Basket item = `{ text, docId, locator, timestamp }`. The locator (PDF page
-  / EPUB spine href) keeps every item traceable to its source.
-- Basket screen behaves like a cart: list items, remove one, clear all.
-  Persistent across restarts.
+### F4 — Saved
+- Selecting text in any open document offers **"Save"** in the platform's
+  selection menu.
+- A PDF selection offers **drag handles** at either end, so a selection can be
+  adjusted after it is made rather than only while it is being drawn. Dragging
+  one moves that end and leaves the other where it is.
+- A saved item is `{ text, docId, locator, timestamp }`. The locator keeps every
+  item traceable to its source: a page number for PDFs, a position for EPUBs.
+- EPUB selections keep their formatting, converted to Markdown at capture time;
+  PDF selections are plain text, because the platform selection API returns no
+  markup.
+- The list behaves like a cart: list items, remove one, clear all. Persistent
+  across restarts. Rows clamp to three lines, expand on a tap, and open on a
+  double-tap.
 - Tapping an item opens a **draft conversation** carrying that excerpt as its
   frozen context; nothing is persisted until the first message is sent; backing
   out keeps the item; on first send the conversation is created and the item
-  leaves the basket.
-- **Done when**: selected text from both a PDF and an EPUB lands in the
-  basket, survives an app restart, can be removed/cleared, and tapping an item
-  starts a conversation that answers using that excerpt, after which the item
-  is gone from the basket.
+  leaves the list.
+- Reachable **while reading**, as a sheet over the page, so the reading position
+  is never lost by going to look at it.
+- **Done when**: selected text from both a PDF and an EPUB lands in the list, a
+  PDF selection can be adjusted with its handles before being saved, the list
+  survives an app restart and can be removed and cleared, and tapping an item
+  starts a conversation that answers using that excerpt, after which the item is
+  gone.
 
 ### F5 — Chatbot
-- Chat screen that answers questions using the **frozen excerpt that fired the
-  conversation**: each conversation stores the basket item it was fired from
-  (`contextText`) and that excerpt is the system-prompt context for every
-  message (baskets are tens of items — no retrieval infra needed).
-- Pluggable provider layer behind a `ChatProvider` interface:
-  - **OpenAI**, **Kimi**, and **OpenRouter** — one shared OpenAI-compatible
-    chat-completions client (configurable base URL, key, model).
+- Each conversation stores the excerpt it was fired from, and that excerpt is the
+  system-prompt context for every message in it. Conversations are per-excerpt,
+  not per-document.
+- Pluggable providers behind a `ChatProvider` interface:
+  - **OpenAI**, **Kimi**, **OpenRouter**, **DeepSeek** — one shared
+    OpenAI-compatible chat-completions client, configurable base URL, key, model.
   - **Anthropic Claude** — native Messages API client.
-  - **GitHub Copilot** — listed but stubbed "not yet supported"
-    (no public chat API exists).
-- Blocking request/response for v1; the interface is shaped so streaming can
-  be added later.
-- Conversations are persisted and resumable.
-- Chat sessions keep their full prompt/message history per session and are
-  **deletable**: removing a session deletes the conversation and all its
-  messages.
-- **Done when**: a conversation fired from a basket excerpt gets an answer
-  that demonstrably uses that excerpt, for each provider with a configured key,
-  and a deleted session (with its history) no longer appears after restart.
+  - **GitHub Copilot** — listed but stubbed; no public chat API exists.
+- The active provider is chosen in the reader's top bar and can be **changed
+  mid-conversation**; the history and the frozen context stay put.
+- Replies render as Markdown.
+- Conversations are persisted, resumable, and deletable with their whole history.
+- A conversation **names itself** from the first message it is sent, and that name
+  is **editable** — from the list row or from the open chat. A typed name is
+  trimmed, collapsed to one line and bounded in length; an empty one is refused,
+  so a chat is never left nameless. Auto-naming never overwrites a name the user
+  set.
+- **Done when**: a conversation fired from a saved excerpt gets an answer that
+  demonstrably uses that excerpt, for each provider with a configured key; a
+  deleted session no longer appears after restart; and a renamed one comes back
+  under its new name, from both entry points.
 
 ### F6 — Settings
-- Provider selection and per-provider API-key entry.
-- Server addresses + credentials for Calibre and Zotero.
-- **Saved prompts**: CRUD for custom prompt templates; in the draft
-  conversation screen they appear as **chips above the composer**; tapping a
-  chip appends the prompt's text on a new line in the message draft
-  (stackable, editable before sending). Conversations created before this
-  change keep their locked system prompt.
-- API keys are encrypted at rest using the OS keychain/keystore, never stored
-  in plain text, never committed to version control.
-- **Done when**: keys and servers survive restart, a saved prompt visibly
-  changes chatbot behavior, and no secret appears in the repo.
+- Provider selection, and each provider's base URL, API key and model.
+- Server addresses and credentials for Calibre and Zotero.
+- **Saved prompts**: CRUD for custom prompt templates, capped at twelve. They
+  appear as chips above the composer in the draft screen and in an open
+  conversation; tapping one sends it, together with whatever is already typed.
+- API keys are encrypted at rest — Android keystore here; another platform would
+  use its own keychain — never stored in plain text, never committed.
+- **Done when**: keys and servers survive restart, a saved prompt visibly changes
+  chatbot behaviour, and no secret appears in the repo.
 
-## 3. Architecture (the decisions that matter)
+### F7 — Library covers
+- Each document shows a cover: an EPUB's own cover image, or a PDF's first page.
+- Covers are cached, so they are not recomputed on every launch.
+- A document without a determinable cover shows its initial instead.
+- **Done when**: a shelf of mixed formats shows real covers for the books that
+  have them, and initials for those that don't, without stalling the list.
 
-1. **Unified HTML rendering.** One embedded web view renders everything:
-   - PDF → **pdf.js** (bundle Mozilla's stock `viewer.html` with the app;
-     pass the file as a query parameter).
-   - EPUB → unzip, parse the OPF manifest (`container.xml` → OPF → spine),
-     serve the spine's XHTML.
-   - Serve app files and bundled assets from **one local origin** (custom
-     scheme handler / local asset server) so pdf.js can XHR the file and the
-     same-origin selection pipeline works everywhere.
-   - Why: the basket needs identical text selection in both formats; one
-     DOM-based pipeline beats two native ones. Web content needs **DOM
-     storage enabled** — pdf.js dies silently without `localStorage`.
-2. **Selection → basket bridge.** Hook the web view's native text-selection
-   menu, read `window.getSelection()` through a JS↔native bridge, push
-   `{text, docId, locator}` to native code.
-3. **Position tracking.** PDF: hook pdf.js `eventBus.on('pagechanging')`.
-   EPUB: intercept navigation and record the root-relative href.
-4. **Local model.** Relational store (SQLite-class) with three tables:
-   `documents(id, title, fileName, format, lastLocator, updatedAt)`,
-   `basket_items(id, docId, text, locator, createdAt)`,
-   `conversations/messages` (+ prompt choice per conversation for legacy
-   conversations, and a `contextText` frozen-excerpt column for new
-   basket-fired conversations).
-   Preferences in a simple key-value store; secrets encrypted.
-5. **Feature modules.** `reader`, `library`, `sync`, `basket`, `chat`,
-   `settings`, `data` — MVVM (or unidirectional-data-flow equivalent):
-   screens observe repositories, never touch storage/network directly.
-6. **Chat context.** System prompt = the conversation's frozen `contextText`
-   excerpt, plus the locked saved prompt on legacy conversations only; no
-   whole-basket injection. No embeddings, no vector search — revisit only if
-   baskets outgrow context windows.
+## 3. The seams that make it portable
 
-## 4. Desktop decision points (recommendations)
+The Android implementation splits rendering from everything else. Anything below
+the renderers is plain Kotlin and could move:
 
-| Concern | Android (existing) | Desktop recommendation |
-|---|---|---|
-| UI toolkit | Jetpack Compose | **Compose Multiplatform** (max code reuse from the Android app: ViewModels, repos, parsers are plain Kotlin) — Electron/Tauri also fit the web-view-centric design |
-| Web view | Android WebView | CEF (via JCEF) if Compose; the toolkit's native webview otherwise |
-| PDF renderer | bundled pdf.js legacy | Same — pdf.js is platform-neutral |
-| Local origin | WebViewAssetLoader | Custom scheme handler (`lecturo://`) or loopback server |
-| Database | Room | SQLite via SQLDelight (shared Kotlin) |
-| Settings | DataStore | Properties/JSON file in app config dir |
-| Key encryption | AndroidKeyStore | OS keychain (Windows Credential Manager / macOS Keychain / libsecret) |
-| Networking | OkHttp + kotlinx.serialization | Same (both are multiplatform) |
-| XML parsing | XmlPullParser | Same (JVM) |
+| Seam | Contract |
+|---|---|
+| Saved capture | `addToSaved(text, locator)` — both renderers meet here; nothing downstream knows the format |
+| Remote libraries | `RemoteLibrarySource`: `browse() / search() / download()` |
+| Chat | `ChatProvider`: `chat(system, messages)` |
+| Storage | Room: documents, saved items, conversations, messages, prompts |
+| Positions | opaque strings — a page number, or Readium's serialized `Locator` |
 
-## 5. Boundaries
+What is **not** portable, and would be re-decided on a desktop port:
+
+- **Both renderers.** PDF uses `androidx.pdf`, which is the Android platform's
+  own renderer; EPUB uses the Readium Kotlin toolkit, which is Android too.
+  Neither exists on desktop.
+- **The selection menus.** Both are the Android floating action mode, and both
+  feed the seam above them.
+- **The PDF pickers**, which are drawn against `androidx.pdf`'s own touch targets.
+  A port would have neither those targets nor the same page geometry to draw them
+  against, so they would be rebuilt rather than reused.
+- **Key storage**, **Room**, and **DataStore** — each has a platform equivalent.
+- **The cover pipeline**, which leans on `PdfRenderer` for PDFs.
+
+The invariant a port must preserve is the first row of that table: whatever
+renders the documents, capture must end in `(text, locator)`.
+
+## 4. Boundaries
 
 - No cloud accounts of the app's own; sync is strictly Calibre/Zotero.
-- No background sync, no EPUB editing, no annotations beyond the basket.
+- No background sync, no EPUB editing, no annotations beyond the saved queue.
+- Deleting documents and saved items is always local.
 - No git pushes or credential commits by automated agents without approval.
 
-## 6. Known pitfalls (learned on Android)
+## 5. Not yet built
 
-- pdf.js in a web view **requires DOM storage enabled**, otherwise the viewer
-  half-initializes: toolbar works, pages stay blank.
-- Serve documents from the **same origin** as pdf.js or its XHR fetch fails.
-- `kxml2` may be unavailable in some build environments; `xpp3:xpp3:1.1.4c`
-  is a working `XmlPullParserFactory` for JVM tests.
-- Test fixtures: a self-generated multi-page PDF and minimal EPUB live at
-  `/tmp/lecturo_test/` on the dev machine (regenerate with
-  `make_fixtures.py` there if wiped).
+- **Provenance** — which source a document came from. Needed before covers can be
+  limited to fetched books, and before a book whose file is gone could be
+  re-downloaded.
+- **Remote covers** — Calibre's OPDS thumbnail link is discarded today; Zotero
+  offers none.
+- **The reader's chat panel** — conversations open full-screen when fired from the
+  reader; they should open as a panel over the page instead.

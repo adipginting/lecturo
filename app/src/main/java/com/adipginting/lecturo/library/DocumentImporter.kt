@@ -13,6 +13,10 @@ import java.util.UUID
 /**
  * Copies a document from a content URI into app-private storage and
  * registers it in the library. Import = copy: the app owns its library.
+ *
+ * The name a file arrives under decides nothing: files are read for their
+ * signature first, so a web page saved under an EPUB name is turned away here
+ * rather than left in the library to fail when it is opened.
  */
 class DocumentImporter(
     private val context: Context,
@@ -20,26 +24,27 @@ class DocumentImporter(
 ) {
     suspend fun import(uri: Uri): DocumentEntity = withContext(Dispatchers.IO) {
         val displayName = queryDisplayName(uri) ?: "document"
-        val format = when {
-            displayName.endsWith(".pdf", ignoreCase = true) -> "pdf"
-            displayName.endsWith(".epub", ignoreCase = true) -> "epub"
-            else -> throw IllegalArgumentException("Unsupported file: $displayName")
-        }
+        val stream = context.contentResolver.openInputStream(uri)?.buffered()
+            ?: throw IllegalArgumentException("Cannot open $displayName")
         val id = UUID.randomUUID().toString()
-        val fileName = "$id.$format"
         val dir = File(context.filesDir, "documents").apply { mkdirs() }
-        val dest = File(dir, fileName)
-        context.contentResolver.openInputStream(uri)?.use { input ->
-            dest.outputStream().use { output -> input.copyTo(output) }
-        } ?: throw IllegalArgumentException("Cannot open $uri")
-        val doc = DocumentEntity(
-            id = id,
-            title = displayName.substringBeforeLast('.'),
-            fileName = fileName,
-            format = format,
-        )
-        repo.add(doc)
-        doc
+
+        stream.use { input ->
+            val header = BookFile.readHeader(input)
+            val format = BookFile.sniff(header)
+                ?: throw IllegalArgumentException(BookFile.describe(header, displayName))
+            val fileName = "$id.$format"
+            File(dir, fileName).outputStream().use { output ->
+                output.write(header)
+                input.copyTo(output)
+            }
+            DocumentEntity(
+                id = id,
+                title = displayName.substringBeforeLast('.'),
+                fileName = fileName,
+                format = format,
+            )
+        }.also { repo.add(it) }
     }
 
     private fun queryDisplayName(uri: Uri): String? =
