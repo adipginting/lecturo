@@ -19,7 +19,7 @@ class AnthropicProvider(
     private val apiKey: String,
     private val model: String,
     private val apiBase: String = "https://api.anthropic.com",
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = modelApiClient(),
 ) : ChatProvider {
 
     override val id = "anthropic"

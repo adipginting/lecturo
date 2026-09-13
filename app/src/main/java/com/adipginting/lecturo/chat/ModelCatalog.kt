@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
@@ -13,7 +12,7 @@ import okhttp3.Request
  * `{"data": [{"id": ...}]}`; only the auth headers differ.
  */
 object ModelCatalog {
-    private val client = OkHttpClient()
+    private val client = modelApiClient()
     private val json = Json { ignoreUnknownKeys = true }
 
     /** Providers without a model-list endpoint return null. */

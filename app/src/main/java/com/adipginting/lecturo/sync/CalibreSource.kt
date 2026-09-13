@@ -16,7 +16,6 @@ class CalibreSource(
     private val client: OkHttpClient = OkHttpClient(),
 ) : RemoteLibrarySource {
 
-    override val name = "Calibre"
     override val isConfigured get() = baseUrl.isNotBlank()
 
     private val root = baseUrl.trimEnd('/') + "/opds"

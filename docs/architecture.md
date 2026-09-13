@@ -57,12 +57,38 @@ in the reader's top bar and can be changed mid-conversation; messages and contex
 survive the switch. OpenAI, Kimi, OpenRouter and DeepSeek share one
 OpenAI-compatible client; Anthropic has its own Messages client; Copilot is
 listed and stubbed, because it has no public chat API. Replies render as Markdown.
+Model calls allow 30 seconds of connect, read and write — triple OkHttp's
+defaults — because a completion arrives token by token (`modelApiClient`).
+
+**A document's chat.** Conversations are per-excerpt, and a document has a
+current one: the conversation fired from it that was engaged with most recently,
+resolved from `conversations.docId` by `updatedAt`. The reader's top bar carries
+a chat icon — between Saved and the model picker — that opens that conversation
+in the panel, tinted while one is in reach and offering the chats list when there
+is none. Asking about a new excerpt starts a draft that becomes the document's
+next chat on its first send; the previous conversation stays in the list
+untouched. A send that never gets a reply is not a chat: the conversation the
+draft created is rolled back, the excerpt stays in Saved, and the draft stays in
+the composer to retry. A pending draft wins over the stored conversation, but
+only for its own document.
 
 Conversations name themselves after their first message, and that name is
 editable — from the list row or from the chat's own title. Both routes run
 through `ConversationTitle`, which flattens whitespace, caps the length and
 refuses to leave a chat nameless; auto-naming never overwrites a name the user
 set.
+
+**The panel.** A conversation opened from the reader rides over the page in a
+bottom sheet instead of replacing it: the same history and the same composer,
+with the book still visible and scrollable above. It is deliberately *not* the
+modal sheet the Saved list uses — a scrim would stop the page being read, which
+is the point of the panel. Collapsing puts it away and keeps nothing itself: the
+way back is the document's chat icon, which re-derives the draft or the current
+conversation from the same sources the panel opened from. Being where the typing
+happens, the panel is the one surface that must clear the phone: its content is
+padded by `WindowInsets.safeDrawing`'s bottom, and the scaffold itself takes
+`imePadding`, so the composer rides above the navigation bar and above the
+keyboard.
 
 **Prompts.** Saved prompts are CRUD-able in Settings, capped at twelve. They
 appear as chips above the composer in both the draft screen and an open
@@ -136,17 +162,16 @@ from the position kept in the library.
   discards; Zotero offers no cover images at all. Remote rows show initials.
 - **Cover size.** Covers are cached at the size they arrive — a full-size jacket
   image can be over a megabyte. They should be downscaled before caching.
-- **The reader's chat panel.** Opening a conversation while reading should slide a
-  panel up over the book rather than leaving the reader. Designed, not built.
 
 ## What is checked, and what is not
 
-`./gradlew :app:assembleDebug :app:testDebugUnitTest` — 65 tests, green. They
+`./gradlew :app:assembleDebug :app:testDebugUnitTest` — 85 tests, green. They
 cover the pure logic and the contracts: the HTML-to-Markdown converter and the
 Markdown renderer, the OPDS and Zotero parsers, the file-signature checks that
 decide what a book is, the fetch that follows a download page (against a local
 server), the document downloader, the model catalog, the provider clients, the
-selection-handle placement, and the cover extraction and fetch rules.
+selection-handle placement, the active-chat and reader-chat-target rules, and
+the cover extraction and fetch rules.
 
 Chat has also been driven against a real provider rather than a mock: the device
 holds a DeepSeek conversation, and no endpoint override is configured.

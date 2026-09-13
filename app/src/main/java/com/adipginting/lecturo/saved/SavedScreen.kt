@@ -112,6 +112,7 @@ fun SavedScreen(
                                     docTitle = row.docTitle,
                                     locator = row.item.locator,
                                     savedItemId = row.item.id,
+                                    docId = row.item.docId,
                                 )
                                 onOpenDraft()
                             },

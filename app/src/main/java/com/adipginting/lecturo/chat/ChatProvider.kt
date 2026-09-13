@@ -1,7 +1,21 @@
 package com.adipginting.lecturo.chat
 
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
+
 /** One message in a conversation; [role] is "user" or "assistant". */
 data class ChatMessage(val role: String, val text: String)
+
+/**
+ * Client for calls to a model API. OkHttp's defaults (10s) are tripled: a
+ * completion is generated token by token and regularly outlives an ordinary
+ * web request.
+ */
+internal fun modelApiClient(): OkHttpClient = OkHttpClient.Builder()
+    .connectTimeout(30, TimeUnit.SECONDS)
+    .readTimeout(30, TimeUnit.SECONDS)
+    .writeTimeout(30, TimeUnit.SECONDS)
+    .build()
 
 /**
  * A chat backend. Blocking request/response for v1; when streaming lands it

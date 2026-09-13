@@ -10,6 +10,10 @@ class ChatRepository(private val db: LecturoDatabase) {
 
     fun observeConversations(): Flow<List<ConversationEntity>> = conversations.observeAll()
 
+    /** The conversations fired from one document, for picking its active chat. */
+    fun observeForDoc(docId: String): Flow<List<ConversationEntity>> =
+        conversations.observeForDoc(docId)
+
     fun observeMessages(conversationId: Long): Flow<List<MessageEntity>> =
         messages.observeFor(conversationId)
 
@@ -25,6 +29,7 @@ class ChatRepository(private val db: LecturoDatabase) {
         promptId: Long?,
         customPrompt: String? = null,
         contextText: String? = null,
+        docId: String? = null,
         docTitle: String? = null,
         docLocator: String? = null,
     ): Long =
@@ -35,6 +40,7 @@ class ChatRepository(private val db: LecturoDatabase) {
                 promptId = promptId,
                 customPrompt = customPrompt?.takeIf { it.isNotBlank() },
                 contextText = contextText?.takeIf { it.isNotBlank() },
+                docId = docId?.takeIf { it.isNotBlank() },
                 docTitle = docTitle?.takeIf { it.isNotBlank() },
                 docLocator = docLocator?.takeIf { it.isNotBlank() },
             ),

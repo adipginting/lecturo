@@ -101,8 +101,6 @@ class MainActivity : FragmentActivity() {
                         ReaderScreen(
                             docId = docId,
                             onBack = { navController.popBackStack() },
-                            onOpenDraft = { navController.navigate("chat/new") },
-                            onOpenChats = { navController.navigate("conversations") },
                         )
                     }
                 }

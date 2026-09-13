@@ -13,10 +13,12 @@ import com.adipginting.lecturo.data.ChatRepository
 import com.adipginting.lecturo.data.LecturoDatabase
 import com.adipginting.lecturo.data.DocumentEntity
 import com.adipginting.lecturo.data.DocumentRepository
+import com.adipginting.lecturo.data.activeConversation
 import com.adipginting.lecturo.library.BookFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,8 +55,10 @@ class ReaderViewModel(
     private val chatRepo = ChatRepository(LecturoDatabase.get(app))
     private val chatSettings = ChatSettings(app)
 
-    val prompts = chatRepo.observePrompts()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** The document's active chat: the conversation last engaged with, if any. */
+    val activeChat = chatRepo.observeForDoc(docId)
+        .map { activeConversation(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** All selectable providers and the current global selection. */
     var providerOptions by mutableStateOf<List<ProviderOption>>(emptyList())

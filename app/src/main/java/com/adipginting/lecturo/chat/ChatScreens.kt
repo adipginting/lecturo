@@ -116,8 +116,6 @@ fun ConversationListScreen(
     val conversations by vm.conversations.collectAsState()
     val providerId by vm.selectedProvider.collectAsState()
     var showNewDialog by remember { mutableStateOf(false) }
-    var pendingDelete by remember { mutableStateOf<ConversationEntity?>(null) }
-    var pendingRename by remember { mutableStateOf<ConversationEntity?>(null) }
 
     Scaffold(
         topBar = {
@@ -136,55 +134,12 @@ fun ConversationListScreen(
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-            if (conversations.isEmpty()) {
-                Text(
-                    text = "No conversations yet. Tap + to chat about what you saved.",
-                    modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(16.dp),
-                ) {
-                    items(conversations, key = { it.id }) { conversation ->
-                        ConversationRow(
-                            conversation = conversation,
-                            onClick = { onOpenConversation(conversation.id) },
-                            onRename = { pendingRename = conversation },
-                            onDelete = { pendingDelete = conversation },
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    pendingRename?.let { conversation ->
-        RenameDialog(
-            current = conversation.title,
-            onDismiss = { pendingRename = null },
-            onRename = { title -> vm.rename(conversation.id, title) },
-        )
-    }
-
-    pendingDelete?.let { conversation ->
-        AlertDialog(
-            onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete \"${conversation.title}\"?") },
-            text = { Text("This deletes the chat session and its whole prompt history.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        vm.delete(conversation.id)
-                        pendingDelete = null
-                    },
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
-            },
+        ConversationListBody(
+            conversations = conversations,
+            onOpenConversation = onOpenConversation,
+            onRename = { id, title -> vm.rename(id, title) },
+            onDelete = { vm.delete(it) },
+            modifier = Modifier.padding(padding),
         )
     }
 
@@ -200,6 +155,74 @@ fun ConversationListScreen(
                     showNewDialog = false
                     onOpenConversation(id)
                 }
+            },
+        )
+    }
+}
+
+/**
+ * The conversations themselves — rows, and the renaming and deleting they offer —
+ * with no chrome: the full screen and the reader's panel each frame it, and each
+ * decides what to do with a tap.
+ */
+@Composable
+internal fun ConversationListBody(
+    conversations: List<ConversationEntity>,
+    onOpenConversation: (Long) -> Unit,
+    onRename: (Long, String) -> Unit,
+    onDelete: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var pendingDelete by remember { mutableStateOf<ConversationEntity?>(null) }
+    var pendingRename by remember { mutableStateOf<ConversationEntity?>(null) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        if (conversations.isEmpty()) {
+            Text(
+                text = "No conversations yet — ask about something you saved.",
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(16.dp),
+            ) {
+                items(conversations, key = { it.id }) { conversation ->
+                    ConversationRow(
+                        conversation = conversation,
+                        onClick = { onOpenConversation(conversation.id) },
+                        onRename = { pendingRename = conversation },
+                        onDelete = { pendingDelete = conversation },
+                    )
+                }
+            }
+        }
+    }
+
+    pendingRename?.let { conversation ->
+        RenameDialog(
+            current = conversation.title,
+            onDismiss = { pendingRename = null },
+            onRename = { title -> onRename(conversation.id, title) },
+        )
+    }
+
+    pendingDelete?.let { conversation ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Delete \"${conversation.title}\"?") },
+            text = { Text("This deletes the chat session and its whole prompt history.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete(conversation.id)
+                        pendingDelete = null
+                    },
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
             },
         )
     }
@@ -470,16 +493,77 @@ fun ChatScreen(
         },
     ),
 ) {
-    val messages by vm.messages.collectAsState()
-    var input by remember { mutableStateOf("") }
     var showModelPicker by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
+    ChatDialogs(
+        vm = vm,
+        showRename = showRename,
+        showModelPicker = showModelPicker,
+        onDismissRename = { showRename = false },
+        onDismissModelPicker = { showModelPicker = false },
+    )
 
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { ChatTitle(title = vm.title, onRename = { showRename = true }) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    ProviderButton(vm = vm, onClick = { showModelPicker = true })
+                },
+            )
+        },
+    ) { padding ->
+        ChatBody(vm = vm, modifier = Modifier.padding(padding).imePadding())
+    }
+}
+
+/** A conversation's name, tappable to change it. */
+@Composable
+internal fun ChatTitle(title: String, onRename: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.clickable(onClick = onRename),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = "Rename chat",
+            modifier = Modifier.padding(start = 8.dp).size(16.dp),
+        )
+    }
+}
+
+/** The button naming the model that answers this conversation. */
+@Composable
+internal fun ProviderButton(vm: ChatViewModel, onClick: () -> Unit) {
+    androidx.compose.material3.TextButton(onClick = onClick) {
+        Text(vm.providerName, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** The rename and model pickers, for whichever chrome is hosting a conversation. */
+@Composable
+internal fun ChatDialogs(
+    vm: ChatViewModel,
+    showRename: Boolean,
+    showModelPicker: Boolean,
+    onDismissRename: () -> Unit,
+    onDismissModelPicker: () -> Unit,
+) {
     if (showRename) {
         RenameDialog(
             current = vm.title,
-            onDismiss = { showRename = false },
+            onDismiss = onDismissRename,
             onRename = { vm.rename(it) },
         )
     }
@@ -488,13 +572,24 @@ fun ChatScreen(
         com.adipginting.lecturo.reader.ModelPickerDialog(
             options = vm.providerOptions,
             selectedId = vm.selectedProviderId,
-            onDismiss = { showModelPicker = false },
+            onDismiss = onDismissModelPicker,
             onSelect = {
                 vm.changeProvider(it)
-                showModelPicker = false
+                onDismissModelPicker()
             },
         )
     }
+}
+
+/**
+ * A conversation's history and composer, with no chrome of its own: the full
+ * screen and the reader's panel each put their own around it.
+ */
+@Composable
+internal fun ChatBody(vm: ChatViewModel, modifier: Modifier = Modifier) {
+    val messages by vm.messages.collectAsState()
+    var input by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
     val excerpt = vm.contextExcerpt
     val headerItems = if (excerpt != null) 1 else 0
 
@@ -502,111 +597,76 @@ fun ChatScreen(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1 + headerItems)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { showRename = true },
-                    ) {
-                        Text(
-                            text = vm.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Rename chat",
-                            modifier = Modifier.padding(start = 8.dp).size(16.dp),
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    androidx.compose.material3.TextButton(onClick = { showModelPicker = true }) {
-                        Text(vm.providerName, style = MaterialTheme.typography.labelMedium)
-                    }
-                },
+    Column(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(16.dp),
+        ) {
+            if (excerpt != null) {
+                item(key = "context") {
+                    ContextItem(excerpt = excerpt, meta = vm.contextMeta)
+                }
+            }
+            items(messages, key = { it.id }) { message ->
+                MessageBubble(message)
+            }
+        }
+        vm.error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
-        },
-    ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(16.dp),
+        }
+        val promptChips by vm.prompts.collectAsState()
+        if (promptChips.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (excerpt != null) {
-                    item(key = "context") {
-                        ContextItem(excerpt = excerpt, meta = vm.contextMeta)
+                promptChips.forEach { prompt ->
+                    item(key = prompt.id) {
+                        androidx.compose.material3.AssistChip(
+                            onClick = {
+                                // Same as the draft screen: one tap sends.
+                                val message = if (input.isBlank()) {
+                                    prompt.body
+                                } else {
+                                    input + "\n" + prompt.body
+                                }
+                                input = ""
+                                vm.send(message)
+                            },
+                            label = { Text(prompt.title) },
+                        )
                     }
                 }
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(message)
-                }
             }
-            vm.error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-            val promptChips by vm.prompts.collectAsState()
-            if (promptChips.isNotEmpty()) {
-                androidx.compose.foundation.lazy.LazyRow(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                label = { Text("Ask about what you saved") },
+                modifier = Modifier.weight(1f),
+                enabled = !vm.sending,
+            )
+            if (vm.sending) {
+                CircularProgressIndicator(modifier = Modifier.padding(12.dp))
+            } else {
+                IconButton(
+                    onClick = {
+                        vm.send(input)
+                        input = ""
+                    },
+                    enabled = input.isNotBlank(),
                 ) {
-                    promptChips.forEach { prompt ->
-                        item(key = prompt.id) {
-                            androidx.compose.material3.AssistChip(
-                                onClick = {
-                                    // Same as the draft screen: one tap sends.
-                                    val message = if (input.isBlank()) {
-                                        prompt.body
-                                    } else {
-                                        input + "\n" + prompt.body
-                                    }
-                                    input = ""
-                                    vm.send(message)
-                                },
-                                label = { Text(prompt.title) },
-                            )
-                        }
-                    }
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = { input = it },
-                    label = { Text("Ask about what you saved") },
-                    modifier = Modifier.weight(1f),
-                    enabled = !vm.sending,
-                )
-                if (vm.sending) {
-                    CircularProgressIndicator(modifier = Modifier.padding(12.dp))
-                } else {
-                    IconButton(
-                        onClick = {
-                            vm.send(input)
-                            input = ""
-                        },
-                        enabled = input.isNotBlank(),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
-                    }
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                 }
             }
         }

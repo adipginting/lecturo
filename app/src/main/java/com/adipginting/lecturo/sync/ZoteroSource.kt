@@ -20,7 +20,6 @@ class ZoteroSource(
     private val client: OkHttpClient = OkHttpClient(),
 ) : RemoteLibrarySource {
 
-    override val name = "Zotero"
     override val isConfigured get() = userId.isNotBlank() && apiKey.isNotBlank()
 
     private val json = Json { ignoreUnknownKeys = true }

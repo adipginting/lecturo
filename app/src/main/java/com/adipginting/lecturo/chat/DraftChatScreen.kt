@@ -45,7 +45,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.adipginting.lecturo.data.SavedRepository
 import com.adipginting.lecturo.data.ChatRepository
 import com.adipginting.lecturo.data.LecturoDatabase
-import com.adipginting.lecturo.data.PromptEntity
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -56,8 +55,12 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
     private val savedRepo = SavedRepository(LecturoDatabase.get(app))
     private val settings = ChatSettings(app)
 
-    /** Snapshot of the draft payload; cleared from the holder on first access. */
-    val args: DraftChatArgs? = DraftChat.pending.also { DraftChat.pending = null }
+    /**
+     * The draft being composed, read through to the holder. Deliberately not
+     * copied in the constructor: the reader keeps one draft ViewModel while a
+     * book is open, and a second excerpt has to be able to replace the first.
+     */
+    val args: DraftChatArgs? get() = DraftChat.pending
 
     val prompts = repo.observePrompts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -75,6 +78,7 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             sending = true
             error = null
+            var created: Long? = null
             try {
                 val providerId = settings.selectedProvider.first()
                 if (providerId == "copilot") {
@@ -85,9 +89,11 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
                     promptId = null,
                     customPrompt = null,
                     contextText = draft.text,
+                    docId = draft.docId,
                     docTitle = draft.docTitle,
                     docLocator = draft.locator,
                 )
+                created = conversationId
                 repo.addMessage(conversationId, "user", text.trim())
                 repo.renameIfUntitled(conversationId, text.trim())
                 val conversation = repo.getConversation(conversationId)
@@ -104,8 +110,14 @@ class DraftChatViewModel(app: Application) : AndroidViewModel(app) {
                 val reply = provider.chat(repo.buildSystemPrompt(conversation), history)
                 repo.addMessage(conversationId, "assistant", reply)
                 draft.savedItemId?.let { savedRepo.remove(it) }
+                // Only this draft: the reader may have started another by now,
+                // and a failed send deliberately leaves the draft in place to retry.
+                DraftChat.consume(draft)
                 sentConversationId = conversationId
             } catch (e: Exception) {
+                // A draft that never got a reply is not a conversation: the
+                // excerpt stays in Saved and in the draft until an answer lands.
+                created?.let { repo.deleteConversation(it) }
                 error = e.message ?: "Chat failed"
             } finally {
                 sending = false
@@ -121,15 +133,6 @@ fun DraftChatScreen(
     onSent: (Long) -> Unit,
     vm: DraftChatViewModel = viewModel(),
 ) {
-    val draft = remember { vm.args }
-    var expanded by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
-    val prompts by vm.prompts.collectAsState()
-
-    LaunchedEffect(vm.sentConversationId) {
-        vm.sentConversationId?.let { onSent(it) }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -142,7 +145,7 @@ fun DraftChatScreen(
             )
         },
     ) { padding ->
-        if (draft == null) {
+        if (vm.args == null) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
@@ -153,69 +156,96 @@ fun DraftChatScreen(
                 )
             }
         } else {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(padding).imePadding(),
+            DraftChatBody(
+                vm = vm,
+                onSent = onSent,
+                modifier = Modifier.padding(padding).imePadding(),
+            )
+        }
+    }
+}
+
+/**
+ * The composer for a draft, with no chrome of its own: the full screen and the
+ * reader's panel each frame it. Sending is what turns a draft into a
+ * conversation, so [onSent] is where both hosts go when that happens.
+ */
+@Composable
+internal fun DraftChatBody(
+    vm: DraftChatViewModel,
+    onSent: (Long) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Composed before the draft is read, so a send that clears the holder still
+    // lets the host hear about the conversation it created.
+    LaunchedEffect(vm.sentConversationId) {
+        vm.sentConversationId?.let(onSent)
+    }
+
+    val draft = vm.args ?: return
+    var expanded by remember { mutableStateOf(false) }
+    var input by remember { mutableStateOf("") }
+    val prompts by vm.prompts.collectAsState()
+
+    Column(modifier = modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {}
+        ContextBanner(
+            draft = draft,
+            expanded = expanded,
+            onToggle = { expanded = !expanded },
+        )
+        if (prompts.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {}
-                ContextBanner(
-                    draft = draft,
-                    expanded = expanded,
-                    onToggle = { expanded = !expanded },
-                )
-                if (prompts.isNotEmpty()) {
-                    LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(prompts, key = { it.id }) { prompt ->
-                            AssistChip(
-                                onClick = {
-                                    // One tap: whatever is already typed plus this
-                                    // prompt goes out as the message.
-                                    val message = appendPrompt(input, prompt.body)
-                                    input = ""
-                                    vm.send(message)
-                                },
-                                label = { Text(prompt.title) },
-                            )
-                        }
-                    }
-                }
-                vm.error?.let {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                items(prompts, key = { it.id }) { prompt ->
+                    AssistChip(
+                        onClick = {
+                            // One tap: whatever is already typed plus this
+                            // prompt goes out as the message.
+                            val message = appendPrompt(input, prompt.body)
+                            input = ""
+                            vm.send(message)
+                        },
+                        label = { Text(prompt.title) },
                     )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            }
+        }
+        vm.error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                label = { Text("Ask about this excerpt") },
+                modifier = Modifier.weight(1f),
+                enabled = !vm.sending,
+            )
+            if (vm.sending) {
+                CircularProgressIndicator(modifier = Modifier.padding(12.dp))
+            } else {
+                IconButton(
+                    onClick = {
+                        vm.send(input)
+                        input = ""
+                    },
+                    enabled = input.isNotBlank(),
                 ) {
-                    OutlinedTextField(
-                        value = input,
-                        onValueChange = { input = it },
-                        label = { Text("Ask about this excerpt") },
-                        modifier = Modifier.weight(1f),
-                        enabled = !vm.sending,
-                    )
-                    if (vm.sending) {
-                        CircularProgressIndicator(modifier = Modifier.padding(12.dp))
-                    } else {
-                        IconButton(
-                            onClick = {
-                                vm.send(input)
-                                input = ""
-                            },
-                            enabled = input.isNotBlank(),
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
-                        }
-                    }
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                 }
             }
         }

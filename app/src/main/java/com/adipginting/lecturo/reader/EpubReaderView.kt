@@ -25,7 +25,6 @@ import androidx.fragment.compose.AndroidFragment
 import com.adipginting.lecturo.util.htmlToMarkdown
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import org.readium.r2.navigator.SelectableNavigator
 import org.readium.r2.navigator.epub.EpubDefaults
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment

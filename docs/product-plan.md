@@ -72,8 +72,9 @@ conversation that knows that excerpt as its frozen context.
   double-tap.
 - Tapping an item opens a **draft conversation** carrying that excerpt as its
   frozen context; nothing is persisted until the first message is sent; backing
-  out keeps the item; on first send the conversation is created and the item
-  leaves the list.
+  out keeps the item; on first send the conversation is created, and the item
+  leaves the list only once the model's reply lands — a failed send (a timeout,
+  say) leaves the item and no conversation behind.
 - Reachable **while reading**, as a sheet over the page, so the reading position
   is never lost by going to look at it.
 - **Done when**: selected text from both a PDF and an EPUB lands in the list, a
@@ -94,7 +95,17 @@ conversation that knows that excerpt as its frozen context.
 - The active provider is chosen in the reader's top bar and can be **changed
   mid-conversation**; the history and the frozen context stay put.
 - Replies render as Markdown.
+- Opened from the reader, a conversation rides over the page in a panel rather
+  than replacing it; putting the panel away keeps it, and the reading position,
+  for coming back to.
+- A document has a **current chat** — the conversation fired from it that was
+  last engaged with — and the reader's top bar opens it in that panel, tinted
+  while one exists and offering the chats list when there is none. Asking about
+  a new excerpt starts the next chat; the previous one stays in the list.
 - Conversations are persisted, resumable, and deletable with their whole history.
+- A draft that gets no reply is **not a conversation**: if the model call fails,
+  the attempt is rolled back, the excerpt stays in Saved, and the draft stays in
+  the composer to retry.
 - A conversation **names itself** from the first message it is sent, and that name
   is **editable** — from the list row or from the open chat. A typed name is
   trimmed, collapsed to one line and bounded in length; an empty one is refused,
@@ -102,8 +113,9 @@ conversation that knows that excerpt as its frozen context.
   set.
 - **Done when**: a conversation fired from a saved excerpt gets an answer that
   demonstrably uses that excerpt, for each provider with a configured key; a
-  deleted session no longer appears after restart; and a renamed one comes back
-  under its new name, from both entry points.
+  deleted session no longer appears after restart; a renamed one comes back
+  under its new name, from both entry points; and a document's most recently
+  engaged chat is one tap away in the reader's top bar.
 
 ### F6 — Settings
 - Provider selection, and each provider's base URL, API key and model.
@@ -143,6 +155,9 @@ What is **not** portable, and would be re-decided on a desktop port:
   Neither exists on desktop.
 - **The selection menus.** Both are the Android floating action mode, and both
   feed the seam above them.
+- **The reader's panel**, which is a Material bottom sheet arranged not to be
+  modal, wrapping chat bodies the full screens also use. The wrapping is portable;
+  the sheet is not.
 - **The PDF pickers**, which are drawn against `androidx.pdf`'s own touch targets.
   A port would have neither those targets nor the same page geometry to draw them
   against, so they would be rebuilt rather than reused.
@@ -166,5 +181,3 @@ renders the documents, capture must end in `(text, locator)`.
   re-downloaded.
 - **Remote covers** — Calibre's OPDS thumbnail link is discarded today; Zotero
   offers none.
-- **The reader's chat panel** — conversations open full-screen when fired from the
-  reader; they should open as a panel over the page instead.

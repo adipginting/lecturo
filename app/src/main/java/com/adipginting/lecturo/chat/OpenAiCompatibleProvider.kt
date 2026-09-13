@@ -19,7 +19,7 @@ class OpenAiCompatibleProvider(
     private val baseUrl: String,
     private val apiKey: String,
     private val model: String,
-    private val client: OkHttpClient = OkHttpClient(),
+    private val client: OkHttpClient = modelApiClient(),
 ) : ChatProvider {
 
     override val displayName = providerDisplayName(id)

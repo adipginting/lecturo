@@ -20,8 +20,6 @@ data class RemoteItem(
  * [browse]/[search] on demand; nothing happens in the background.
  */
 interface RemoteLibrarySource {
-    val name: String
-
     /** False until required settings (server URL, API key, ...) are entered. */
     val isConfigured: Boolean
 

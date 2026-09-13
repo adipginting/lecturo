@@ -87,13 +87,6 @@ interface SavedDao {
 
     @Query("DELETE FROM basket_items")
     suspend fun clear()
-
-    @Query(
-        "SELECT basket_items.*, documents.title AS docTitle, documents.format AS docFormat FROM basket_items " +
-            "LEFT JOIN documents ON documents.id = basket_items.docId " +
-            "ORDER BY basket_items.createdAt",
-    )
-    suspend fun allWithTitles(): List<SavedRow>
 }
 
 @Entity(tableName = "conversations")
@@ -107,6 +100,8 @@ data class ConversationEntity(
     val customPrompt: String? = null,
     /** Excerpt fired from the saved text or the reader to seed this conversation's context. */
     val contextText: String? = null,
+    /** documents.id this chat belongs to; null when started without a document. */
+    val docId: String? = null,
     /** Document title and locator (page/href) captured when the draft was sent. */
     val docTitle: String? = null,
     val docLocator: String? = null,
@@ -135,6 +130,9 @@ data class PromptEntity(
 interface ConversationDao {
     @Query("SELECT * FROM conversations ORDER BY updatedAt DESC")
     fun observeAll(): Flow<List<ConversationEntity>>
+
+    @Query("SELECT * FROM conversations WHERE docId = :docId")
+    fun observeForDoc(docId: String): Flow<List<ConversationEntity>>
 
     @Query("SELECT * FROM conversations WHERE id = :id")
     suspend fun get(id: Long): ConversationEntity?
@@ -193,7 +191,7 @@ interface PromptDao {
         MessageEntity::class,
         PromptEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 abstract class LecturoDatabase : RoomDatabase() {
@@ -260,13 +258,26 @@ abstract class LecturoDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docId` TEXT")
+            }
+        }
+
         fun get(context: Context): LecturoDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     LecturoDatabase::class.java,
                     "lecturo.db",
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                ).addMigrations(
+                    MIGRATION_1_2,
+                    MIGRATION_2_3,
+                    MIGRATION_3_4,
+                    MIGRATION_4_5,
+                    MIGRATION_5_6,
+                    MIGRATION_6_7,
+                )
                     .build().also { instance = it }
             }
     }

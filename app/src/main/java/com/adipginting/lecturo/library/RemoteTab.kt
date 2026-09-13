@@ -36,7 +36,6 @@ import com.adipginting.lecturo.data.LecturoDatabase
 import com.adipginting.lecturo.data.DocumentRepository
 import com.adipginting.lecturo.sync.CalibreSource
 import com.adipginting.lecturo.sync.RemoteItem
-import com.adipginting.lecturo.sync.RemoteLibrarySource
 import com.adipginting.lecturo.sync.SyncSettings
 import com.adipginting.lecturo.sync.ZoteroSource
 import kotlinx.coroutines.flow.SharingStarted
@@ -144,14 +143,6 @@ class SyncViewModel(app: Application) : AndroidViewModel(app) {
                 zotero = zotero.copy(error = error)
             }
         }
-    }
-
-    fun saveCalibreUrl(url: String) {
-        viewModelScope.launch { settings.saveCalibreUrl(url) }
-    }
-
-    fun saveZotero(userId: String, apiKey: String, apiBase: String) {
-        viewModelScope.launch { settings.saveZotero(userId, apiKey, apiBase) }
     }
 }
 

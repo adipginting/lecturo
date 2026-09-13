@@ -1,25 +1,31 @@
 package com.adipginting.lecturo.reader
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +53,6 @@ import com.adipginting.lecturo.ui.theme.Saved
 fun ReaderScreen(
     docId: String,
     onBack: () -> Unit,
-    onOpenDraft: () -> Unit = {},
-    onOpenChats: () -> Unit = {},
 ) {
     val vm: ReaderViewModel = viewModel(
         key = "reader-$docId",
@@ -60,13 +64,67 @@ fun ReaderScreen(
         },
     )
     val state = vm.uiState
+    val activeChat by vm.activeChat.collectAsState()
     val context = LocalContext.current
     var showModelPicker by remember { mutableStateOf(false) }
     var showToc by remember { mutableStateOf(false) }
     var showSaved by remember { mutableStateOf(false) }
     var epubHandle by remember { mutableStateOf<EpubReaderHandle?>(null) }
+    val panel = remember { ReaderPanelState() }
 
-    Scaffold(
+    // The sheet is not modal, so it does not take the back gesture with it.
+    BackHandler(enabled = panel.isOpen) { panel.collapse() }
+
+    // The standard sheet state, with Hidden kept as an anchor: the peek height
+    // is zero, so the collapsed anchor is `Hidden`, which is what tells us the
+    // sheet was dragged shut. The state's default skips Hidden — a standard
+    // sheet normally cannot be dismissed that way — and `hide()` throws on a
+    // state that skips it.
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            skipHiddenState = false,
+        ),
+    )
+    LaunchedEffect(panel.isOpen) {
+        if (panel.isOpen) {
+            scaffoldState.bottomSheetState.expand()
+        } else {
+            scaffoldState.bottomSheetState.hide()
+        }
+    }
+    // Dragged shut rather than asked to close: keep the panel in step, so the
+    // conversation is still there when it is pulled back up. Only once the sheet
+    // has settled — while it is on its way up it still reads as hidden, and
+    // collapsing on that reading would cancel the open.
+    LaunchedEffect(scaffoldState.bottomSheetState.currentValue) {
+        val sheet = scaffoldState.bottomSheetState
+        if (sheet.currentValue == SheetValue.Hidden &&
+            sheet.targetValue == SheetValue.Hidden &&
+            panel.isOpen
+        ) {
+            panel.collapse()
+        }
+    }
+
+    /** Fires a draft from an excerpt and shows it in the panel, still over the page. */
+    fun askAbout(text: String) {
+        DraftChat.pending = DraftChatArgs(
+            text = text,
+            docTitle = state.title,
+            locator = vm.resolveLocator(null),
+            savedItemId = null,
+            docId = docId,
+        )
+        panel.openDraft()
+    }
+
+    BottomSheetScaffold(
+        // The keyboard lifts the whole sheet, so the composer rides above it
+        // instead of being squeezed out of a sheet whose content cannot shrink.
+        modifier = Modifier.imePadding(),
+        scaffoldState = scaffoldState,
+        sheetPeekHeight = 0.dp,
         topBar = {
             TopAppBar(
                 title = { Text(state.title) },
@@ -76,10 +134,37 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
-                    // Saved and chat share one icon, left of the model picker, so
-                    // reading never has to be abandoned to reach either.
+                    // Saved, this document's chat, then the model picker: reading
+                    // never has to be abandoned to reach any of them.
                     IconButton(onClick = { showSaved = true }) {
-                        Icon(Icons.Default.Saved, contentDescription = "Saved and chats")
+                        Icon(Icons.Default.Saved, contentDescription = "Saved")
+                    }
+                    val chatTarget = readerChatTarget(
+                        draft = DraftChat.pending,
+                        activeConversationId = activeChat?.id,
+                        docId = docId,
+                    )
+                    IconButton(
+                        onClick = {
+                            when (chatTarget) {
+                                ReaderChatTarget.Chats -> panel.openChats()
+                                ReaderChatTarget.Draft -> panel.openDraft()
+                                is ReaderChatTarget.Conversation ->
+                                    panel.openConversation(chatTarget.id)
+                            }
+                        },
+                    ) {
+                        Icon(
+                            Icons.Default.Chats,
+                            contentDescription = "Chat about this document",
+                            // A document with a chat in reach says so; an empty
+                            // one offers the chats list instead, untinted.
+                            tint = if (chatTarget == ReaderChatTarget.Chats) {
+                                androidx.compose.material3.LocalContentColor.current
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                        )
                     }
                     val active = vm.providerOptions
                         .firstOrNull { it.id == vm.selectedProviderId }
@@ -100,28 +185,13 @@ fun ReaderScreen(
                 },
             )
         },
-        bottomBar = {
-            val handle = epubHandle
-            if (state.format == "epub" && handle != null && handle.toc.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    androidx.compose.material3.TextButton(
-                        onClick = { handle.prev() },
-                    ) { Text("Previous") }
-                    androidx.compose.material3.TextButton(
-                        onClick = { showToc = true },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Contents") }
-                    androidx.compose.material3.TextButton(
-                        onClick = { handle.next() },
-                    ) { Text("Next") }
-                }
-            }
+        sheetContent = {
+            ReaderPanel(
+                mode = panel.mode,
+                onOpenChats = { panel.openChats() },
+                onOpenConversation = { id -> panel.openConversation(id) },
+                onCollapse = { panel.collapse() },
+            )
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
@@ -139,7 +209,7 @@ fun ReaderScreen(
                         vm.addToSaved(text, null)
                         Toast.makeText(context, "Added to saved", Toast.LENGTH_SHORT).show()
                     },
-                    onAskAi = { text -> openDraft(vm, state.title, text, null, onOpenDraft) },
+                    onAskAi = { text -> askAbout(text) },
                     modifier = Modifier.fillMaxSize(),
                 )
 
@@ -151,10 +221,39 @@ fun ReaderScreen(
                         vm.addToSaved(text, null)
                         Toast.makeText(context, "Added to saved", Toast.LENGTH_SHORT).show()
                     },
-                    onAskAi = { text -> openDraft(vm, state.title, text, null, onOpenDraft) },
+                    onAskAi = { text -> askAbout(text) },
                     onNavigatorReady = { epubHandle = it },
                     modifier = Modifier.fillMaxSize(),
                 )
+            }
+
+            // Chapter stepping, while nothing is covering it: the panel takes
+            // this strip's place when it is open.
+            val handle = epubHandle
+            val chapterBar = !panel.isOpen &&
+                state.format == "epub" &&
+                handle != null &&
+                handle.toc.isNotEmpty()
+            if (chapterBar) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.TextButton(
+                        onClick = { handle?.prev() },
+                    ) { Text("Previous") }
+                    androidx.compose.material3.TextButton(
+                        onClick = { showToc = true },
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Contents") }
+                    androidx.compose.material3.TextButton(
+                        onClick = { handle?.next() },
+                    ) { Text("Next") }
+                }
             }
         }
     }
@@ -175,7 +274,7 @@ fun ReaderScreen(
                 androidx.compose.material3.TextButton(
                     onClick = {
                         showSaved = false
-                        onOpenChats()
+                        panel.openChats()
                     },
                 ) {
                     Icon(
@@ -208,9 +307,10 @@ fun ReaderScreen(
                                         docTitle = row.docTitle,
                                         locator = row.item.locator,
                                         savedItemId = row.item.id,
+                                        docId = row.item.docId,
                                     )
                                     showSaved = false
-                                    onOpenDraft()
+                                    panel.openDraft()
                                 },
                                 onRemove = { savedVm.remove(row.item.id) },
                             )
@@ -266,22 +366,6 @@ fun ReaderScreen(
             },
         )
     }
-}
-
-private fun openDraft(
-    vm: ReaderViewModel,
-    docTitle: String,
-    text: String,
-    pageHint: String?,
-    onOpenDraft: () -> Unit,
-) {
-    DraftChat.pending = DraftChatArgs(
-        text = text,
-        docTitle = docTitle,
-        locator = vm.resolveLocator(pageHint),
-        savedItemId = null,
-    )
-    onOpenDraft()
 }
 
 @Composable

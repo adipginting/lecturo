@@ -23,9 +23,12 @@ own LLM conversation that knows that excerpt as its frozen context.
   document.
 - **Chatbot** — each conversation is fired from a saved excerpt that becomes
   its frozen context, is named after the first message sent, and can be renamed
-  from the list or from the chat itself. Pluggable providers: OpenAI, Kimi,
-  OpenRouter, DeepSeek (OpenAI-compatible), Anthropic Claude (native API);
-  GitHub Copilot stubbed.
+  from the list or from the chat itself. The reader's top bar keeps a document's
+  current chat one tap away — the one last engaged with — and asking about a
+  new excerpt starts the next one. A draft that gets no answer leaves no chat
+  behind: the excerpt stays in Saved until a reply lands. Pluggable providers:
+  OpenAI, Kimi, OpenRouter, DeepSeek (OpenAI-compatible), Anthropic Claude
+  (native API); GitHub Copilot stubbed.
 - **Settings** — provider keys and server credentials, saved prompt templates
   (usable as composer chips, capped at twelve), API keys AES-encrypted with
   AndroidKeyStore.
@@ -45,7 +48,7 @@ Requires the Android SDK (a `local.properties` with `sdk.dir`, or the
 
 ```sh
 ./gradlew :app:assembleDebug       # build debug APK
-./gradlew :app:testDebugUnitTest   # 65 unit tests, green
+./gradlew :app:testDebugUnitTest   # 85 unit tests, green
 ```
 
 ## Documentation
