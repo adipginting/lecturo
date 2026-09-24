@@ -1,0 +1,10 @@
+# Host build output: the image builds these from source.
+web/node_modules
+web/dist
+web/.angular
+server/bin
+server/tmp
+server/internal/infrastructure/webui/dist
+.git
+**/*.log
+.DS_Store

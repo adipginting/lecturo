@@ -1,0 +1,214 @@
+# GitLab CI/CD for the Lecturo monorepo.
+#
+# Mirrors .github/workflows/ci.yml and .github/workflows/deploy.yml:
+#   test   — web, server, openapi and relay, path-filtered to what changed
+#   build  — build and push both images to Docker Hub (main only)
+#   deploy — roll the new images out to k3s (main only)
+#
+# Required CI/CD variables (Settings → CI/CD → Variables), masked:
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, KUBE_CONFIG (base64), POSTGRES_PASSWORD,
+#   BLOB_ACCESS_KEY, BLOB_SECRET_KEY, LECTURO_ENCRYPTION_KEY,
+#   UPSTREAM_BASE_URL, UPSTREAM_API_KEY, UPSTREAM_MODEL
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+
+stages:
+  - test
+  - build
+  - deploy
+
+# --- test --------------------------------------------------------------------
+
+web:test:
+  stage: test
+  image: node:22
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-web/web/**
+        - lecturo-web/Dockerfile
+        - .gitlab-ci.yml
+  cache:
+    key:
+      files:
+        - lecturo-web/web/pnpm-lock.yaml
+    paths:
+      - .pnpm-store/
+  before_script:
+    - corepack enable
+    - pnpm config set store-dir "$CI_PROJECT_DIR/.pnpm-store"
+    - cd lecturo-web/web
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm exec prettier --check "src/**/*.{ts,html,scss}"
+    - pnpm test
+    - pnpm build
+
+server:test:
+  stage: test
+  image: golang:1.26
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-web/server/**
+        - lecturo-web/Dockerfile
+        - .gitlab-ci.yml
+  services:
+    - postgres:15
+  variables:
+    POSTGRES_DB: lecturo
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    TEST_DATABASE_URL: postgres://postgres:postgres@postgres:5432/lecturo?sslmode=disable
+    GOPATH: "$CI_PROJECT_DIR/.go"
+  cache:
+    key: go-server
+    paths:
+      - .go/pkg/mod/
+  before_script:
+    - cd lecturo-web/server
+  script:
+    - test -z "$(gofmt -l .)"
+    - go vet ./...
+    - go build ./...
+    - go test ./...
+
+openapi:lint:
+  stage: test
+  image: node:22
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-web/api/**
+        - lecturo-web/redocly.yaml
+        - .gitlab-ci.yml
+  script:
+    - npx -y @redocly/cli@latest lint lecturo-web/api/openapi.yaml
+
+relay:test:
+  stage: test
+  image: eclipse-temurin:21-jdk
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-relay/**
+        - gradle/**
+        - gradlew
+        - gradlew.bat
+        - .gitlab-ci.yml
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle-home"
+  cache:
+    key: gradle-relay
+    paths:
+      - .gradle-home/
+  script:
+    - ./gradlew -p lecturo-relay test --no-daemon
+
+# --- build -------------------------------------------------------------------
+
+build:web:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: web:test
+      optional: true
+    - job: server:test
+      optional: true
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - docker build -f lecturo-web/Dockerfile -t "$DOCKERHUB_USERNAME/lecturo-web:$CI_COMMIT_SHORT_SHA" -t "$DOCKERHUB_USERNAME/lecturo-web:latest" lecturo-web
+    - docker push "$DOCKERHUB_USERNAME/lecturo-web:$CI_COMMIT_SHORT_SHA"
+    - docker push "$DOCKERHUB_USERNAME/lecturo-web:latest"
+
+build:relay:
+  stage: build
+  image: docker:27
+  services:
+    - docker:27-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: relay:test
+      optional: true
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+  script:
+    - docker build -f lecturo-relay/Dockerfile -t "$DOCKERHUB_USERNAME/lecturo-relay:$CI_COMMIT_SHORT_SHA" -t "$DOCKERHUB_USERNAME/lecturo-relay:latest" .
+    - docker push "$DOCKERHUB_USERNAME/lecturo-relay:$CI_COMMIT_SHORT_SHA"
+    - docker push "$DOCKERHUB_USERNAME/lecturo-relay:latest"
+
+# --- deploy ------------------------------------------------------------------
+
+deploy:
+  stage: deploy
+  image: alpine:3.20
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  needs:
+    - job: build:web
+      optional: true
+    - job: build:relay
+      optional: true
+  variables:
+    KUBECTL_VERSION: v1.32.0
+    KUSTOMIZE_VERSION: 5.7.1
+    KUBECONFIG: "$CI_PROJECT_DIR/.kube/config"
+  before_script:
+    - apk add --no-cache curl bash
+    - curl -sSfL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
+    - chmod +x /usr/local/bin/kubectl
+    - curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VERSION}/kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" | tar xz -C /usr/local/bin
+    - mkdir -p "$(dirname "$KUBECONFIG")"
+    - echo "$KUBE_CONFIG" | base64 -d > "$KUBECONFIG"
+    - chmod 600 "$KUBECONFIG"
+  script:
+    - set -euo pipefail
+    - kubectl apply -f deploy/k3s/base/namespace.yaml
+
+    - kubectl -n lecturo create secret generic lecturo-postgres
+        --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+        --from-literal=DATABASE_URL="postgres://lecturo:${POSTGRES_PASSWORD}@postgres:5432/lecturo?sslmode=disable"
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - kubectl -n lecturo create secret generic lecturo-web-secrets
+        --from-literal=BLOB_ACCESS_KEY="$BLOB_ACCESS_KEY"
+        --from-literal=BLOB_SECRET_KEY="$BLOB_SECRET_KEY"
+        --from-literal=LECTURO_ENCRYPTION_KEY="$LECTURO_ENCRYPTION_KEY"
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    - kubectl -n lecturo create secret generic lecturo-relay-secrets
+        --from-literal=UPSTREAM_BASE_URL="$UPSTREAM_BASE_URL"
+        --from-literal=UPSTREAM_API_KEY="$UPSTREAM_API_KEY"
+        --from-literal=UPSTREAM_MODEL="$UPSTREAM_MODEL"
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # SeaweedFS reads its credentials from a JSON file; keep it in lockstep
+    # with the BLOB_* keys the web app uses.
+    - printf '{"identities":[{"name":"lecturo","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' "$BLOB_ACCESS_KEY" "$BLOB_SECRET_KEY" > s3.json
+    - kubectl -n lecturo create secret generic seaweedfs-s3 --from-file=s3.json=./s3.json --dry-run=client -o yaml | kubectl apply -f -
+    - rm -f s3.json
+
+    - cd deploy/k3s/overlays/prod
+    - kustomize edit set image lecturo-web="$DOCKERHUB_USERNAME/lecturo-web:$CI_COMMIT_SHORT_SHA" lecturo-relay="$DOCKERHUB_USERNAME/lecturo-relay:$CI_COMMIT_SHORT_SHA"
+    - kubectl apply -k .
+    - kubectl -n lecturo rollout status statefulset/postgres --timeout=180s
+    - kubectl -n lecturo rollout status statefulset/seaweedfs --timeout=180s
+    - kubectl -n lecturo rollout status deployment/web --timeout=240s
+    - kubectl -n lecturo rollout status deployment/relay --timeout=180s

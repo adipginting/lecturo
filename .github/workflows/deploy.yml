@@ -1,0 +1,132 @@
+name: Deploy
+
+# Runs after CI succeeds on main: builds both images, pushes them to Docker Hub,
+# then rolls them out to the k3s cluster. `workflow_run` waits for the whole CI
+# workflow, including its path-filtered jobs.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: build, push, roll out
+    # Only a push-triggered CI run on main deploys; not a PR run.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the commit CI tested
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Resolve image tag
+        id: tag
+        run: echo "value=$(echo '${{ github.event.workflow_run.head_sha }}' | cut -c1-12)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push the web image
+        uses: docker/build-push-action@v6
+        with:
+          context: lecturo-web
+          file: lecturo-web/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/lecturo-web:${{ steps.tag.outputs.value }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/lecturo-web:latest
+
+      - name: Build and push the relay image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: lecturo-relay/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/lecturo-relay:${{ steps.tag.outputs.value }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/lecturo-relay:latest
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.32.0
+
+      - name: Install kustomize
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo install kustomize /usr/local/bin/kustomize
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Apply the namespace and secrets
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          BLOB_ACCESS_KEY: ${{ secrets.BLOB_ACCESS_KEY }}
+          BLOB_SECRET_KEY: ${{ secrets.BLOB_SECRET_KEY }}
+          LECTURO_ENCRYPTION_KEY: ${{ secrets.LECTURO_ENCRYPTION_KEY }}
+          UPSTREAM_BASE_URL: ${{ secrets.UPSTREAM_BASE_URL }}
+          UPSTREAM_API_KEY: ${{ secrets.UPSTREAM_API_KEY }}
+          UPSTREAM_MODEL: ${{ secrets.UPSTREAM_MODEL }}
+        run: |
+          set -euo pipefail
+          kubectl apply -f deploy/k3s/base/namespace.yaml
+
+          kubectl -n lecturo create secret generic lecturo-postgres \
+            --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
+            --from-literal=DATABASE_URL="postgres://lecturo:${POSTGRES_PASSWORD}@postgres:5432/lecturo?sslmode=disable" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n lecturo create secret generic lecturo-web-secrets \
+            --from-literal=BLOB_ACCESS_KEY="$BLOB_ACCESS_KEY" \
+            --from-literal=BLOB_SECRET_KEY="$BLOB_SECRET_KEY" \
+            --from-literal=LECTURO_ENCRYPTION_KEY="$LECTURO_ENCRYPTION_KEY" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl -n lecturo create secret generic lecturo-relay-secrets \
+            --from-literal=UPSTREAM_BASE_URL="$UPSTREAM_BASE_URL" \
+            --from-literal=UPSTREAM_API_KEY="$UPSTREAM_API_KEY" \
+            --from-literal=UPSTREAM_MODEL="$UPSTREAM_MODEL" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # SeaweedFS reads its credentials from a JSON config file; keep it in
+          # lockstep with the BLOB_* keys the web app uses.
+          printf '{"identities":[{"name":"lecturo","credentials":[{"accessKey":"%s","secretKey":"%s"}],"actions":["Admin","Read","Write","List","Tagging"]}]}' \
+            "$BLOB_ACCESS_KEY" "$BLOB_SECRET_KEY" > s3.json
+          kubectl -n lecturo create secret generic seaweedfs-s3 \
+            --from-file=s3.json=./s3.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm -f s3.json
+
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          cd deploy/k3s/overlays/prod
+          kustomize edit set image \
+            lecturo-web=${{ secrets.DOCKERHUB_USERNAME }}/lecturo-web:${{ steps.tag.outputs.value }} \
+            lecturo-relay=${{ secrets.DOCKERHUB_USERNAME }}/lecturo-relay:${{ steps.tag.outputs.value }}
+          kubectl apply -k .
+          kubectl -n lecturo rollout status statefulset/postgres --timeout=180s
+          kubectl -n lecturo rollout status statefulset/seaweedfs --timeout=180s
+          kubectl -n lecturo rollout status deployment/web --timeout=240s
+          kubectl -n lecturo rollout status deployment/relay --timeout=180s

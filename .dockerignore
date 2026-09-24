@@ -1,0 +1,21 @@
+# The relay image builds from the repo root (it reuses the root Gradle wrapper).
+# Keep only the wrapper and lecturo-relay to shrink the build context.
+
+.git
+.github
+deploy
+lecturo-android
+lecturo-desktop
+lecturo-web
+PRD.md
+PRD.odt
+README.md
+
+**/build
+**/.gradle
+**/.kotlin
+**/bin
+**/obj
+**/node_modules
+**/*.log
+.DS_Store
