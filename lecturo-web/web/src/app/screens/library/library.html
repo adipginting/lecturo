@@ -1,0 +1,158 @@
+<section class="screen">
+  <input
+    #picker
+    type="file"
+    hidden
+    multiple
+    accept=".pdf,.epub,application/pdf,application/epub+zip"
+    (change)="onFiles($event)"
+  />
+
+  <div class="screen__bar">
+    <h1 class="screen__title">Library</h1>
+    <div class="screen__actions">
+      <button class="icon-btn" aria-label="Import" (click)="openFilePicker(picker)">
+        <span class="ms">add</span>
+      </button>
+      <button class="icon-btn" aria-label="Refresh" (click)="refresh()">
+        <span class="ms">refresh</span>
+      </button>
+      <button class="icon-btn" aria-label="Settings" routerLink="/settings">
+        <span class="ms">settings</span>
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="banner-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (!layout.isCompact() && activeTab() === 'Local') {
+    <div class="download-bar">
+      <input
+        class="text-field"
+        placeholder="https://example.com/book.epub"
+        [value]="importUrl()"
+        (input)="importUrl.set($any($event.target).value)"
+        (keydown.enter)="download()"
+      />
+      <button class="btn btn--tonal" [disabled]="busy()" (click)="download()">Download</button>
+    </div>
+  }
+
+  <nav class="tabs">
+    @for (tab of tabs; track tab) {
+      <button class="tab" [class.tab--active]="tab === activeTab()" (click)="selectTab(tab)">
+        {{ tab }}
+      </button>
+    }
+  </nav>
+
+  @if (activeTab() === 'Local') {
+    @if (documents().length === 0) {
+      <p class="screen__sub">
+        No documents yet. Press + to import a PDF or EPUB
+        @if (!layout.isCompact()) {
+          , or paste a URL above to download one
+        }
+        .
+      </p>
+    }
+
+    <div
+      class="library"
+      [class.library--two-pane]="layout.windowClass() === 'medium'"
+      [class.library--grid]="layout.isExpanded()"
+    >
+      <ul class="doc-list">
+        @for (doc of documents(); track doc.id) {
+          <li class="doc" [class.doc--active]="doc === selected()" (click)="open(doc)">
+            <span class="cover" [style.background]="tint(doc)" [style.color]="fg(doc)">
+              {{ initial(doc) }}
+            </span>
+            <span class="doc__text">
+              <span class="doc__title">{{ doc.title }}</span>
+              <span class="doc__meta">{{ meta(doc) }}</span>
+            </span>
+            <button class="icon-btn" aria-label="Delete" (click)="remove(doc, $event)">
+              <span class="ms">delete</span>
+            </button>
+          </li>
+        }
+      </ul>
+
+      @if (layout.windowClass() === 'medium' && selected(); as doc) {
+        <aside class="detail">
+          <span
+            class="cover"
+            style="width: 120px; height: 168px; font-size: 48px"
+            [style.background]="tint(doc)"
+            [style.color]="fg(doc)"
+          >
+            {{ initial(doc) }}
+          </span>
+          <span class="doc__title">{{ doc.title }}</span>
+          <span class="doc__meta">{{ meta(doc) }}</span>
+          <button class="btn btn--filled" (click)="open(doc)">Open</button>
+        </aside>
+      }
+    </div>
+  } @else {
+    <div class="download-bar">
+      @if (remotePage()?.path) {
+        <button class="icon-btn" aria-label="Back" (click)="remoteBack()">
+          <span class="ms">arrow_back</span>
+        </button>
+      }
+      <input
+        class="text-field"
+        placeholder="Search this library"
+        [value]="remoteQuery()"
+        (input)="remoteQuery.set($any($event.target).value)"
+        (keydown.enter)="searchRemote()"
+      />
+      <button class="btn btn--tonal" [disabled]="remoteBusy()" (click)="searchRemote()">
+        Search
+      </button>
+      <button class="btn btn--outlined" [disabled]="remoteBusy()" (click)="browse()">Sync</button>
+    </div>
+
+    @if (remotePage() && !remotePage()?.searchable) {
+      <p class="screen__sub">This catalog does not offer search.</p>
+    }
+    @if (remoteError()) {
+      <p class="banner-error" role="alert">{{ remoteError() }}</p>
+    }
+
+    <ul class="doc-list">
+      @for (item of remotePage()?.items ?? []; track item.remoteId) {
+        <li class="doc" (click)="openRemote(item)">
+          <span class="cover" style="background: var(--l-surface-high)">
+            <span class="ms">{{ item.isCatalog ? 'folder' : 'menu_book' }}</span>
+          </span>
+          <span class="doc__text">
+            <span class="doc__title">{{ item.title }}</span>
+            <span class="doc__meta">{{ remoteMeta(item) }}</span>
+          </span>
+          @if (item.downloaded) {
+            <span class="ms" style="color: var(--l-primary)">check_circle</span>
+          } @else {
+            <span class="ms" style="color: var(--l-on-surface-variant)">
+              {{ item.isCatalog ? 'chevron_right' : 'download' }}
+            </span>
+          }
+        </li>
+      }
+    </ul>
+
+    @if (remoteBusy()) {
+      <p class="screen__sub">Loading…</p>
+    }
+  }
+
+  @if (activeTab() === 'Local' && layout.windowClass() !== 'medium') {
+    <button class="fab" aria-label="Import" (click)="openFilePicker(picker)">
+      <span class="ms">add</span>
+    </button>
+  }
+</section>

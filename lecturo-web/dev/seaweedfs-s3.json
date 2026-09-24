@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "lecturo-dev",
+      "credentials": [{ "accessKey": "any", "secretKey": "any" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

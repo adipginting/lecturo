@@ -1,0 +1,57 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Typography: Plus Jakarta Sans for UI, Source Serif 4 for the reading surface. -->
+    <FontFamily x:Key="UiFont">avares://Lecturo/Assets/Fonts#Plus Jakarta Sans</FontFamily>
+    <FontFamily x:Key="ReadingFont">avares://Lecturo/Assets/Fonts#Source Serif 4</FontFamily>
+
+    <!-- Material 3 "light" palette sampled from the Penpot file. -->
+    <Color x:Key="SurfaceColor">#FFFBFE</Color>
+    <Color x:Key="SurfaceContainerLowColor">#F7F2FA</Color>
+    <Color x:Key="SurfaceContainerColor">#F3EDF7</Color>
+    <Color x:Key="SurfaceContainerHighColor">#ECE6F0</Color>
+    <Color x:Key="OnSurfaceColor">#1C1B1F</Color>
+    <Color x:Key="OnSurfaceVariantColor">#49454F</Color>
+    <Color x:Key="PrimaryColor">#6650A4</Color>
+    <Color x:Key="PrimaryContainerColor">#EADDFF</Color>
+    <Color x:Key="OnPrimaryContainerColor">#21005D</Color>
+    <Color x:Key="SecondaryContainerColor">#E8DEF8</Color>
+    <Color x:Key="OnSecondaryContainerColor">#1D192B</Color>
+    <Color x:Key="OutlineColor">#79747E</Color>
+    <Color x:Key="OutlineVariantColor">#CAC4D0</Color>
+    <Color x:Key="SelectionColor">#D0BCFF</Color>
+    <Color x:Key="PickerColor">#3700B3</Color>
+    <Color x:Key="ErrorContainerColor">#FFD8E4</Color>
+    <Color x:Key="OnErrorContainerColor">#31111D</Color>
+
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+    <SolidColorBrush x:Key="SurfaceContainerLowBrush" Color="{StaticResource SurfaceContainerLowColor}" />
+    <SolidColorBrush x:Key="SurfaceContainerBrush" Color="{StaticResource SurfaceContainerColor}" />
+    <SolidColorBrush x:Key="SurfaceContainerHighBrush" Color="{StaticResource SurfaceContainerHighColor}" />
+    <SolidColorBrush x:Key="OnSurfaceBrush" Color="{StaticResource OnSurfaceColor}" />
+    <SolidColorBrush x:Key="OnSurfaceVariantBrush" Color="{StaticResource OnSurfaceVariantColor}" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}" />
+    <SolidColorBrush x:Key="PrimaryContainerBrush" Color="{StaticResource PrimaryContainerColor}" />
+    <SolidColorBrush x:Key="OnPrimaryContainerBrush" Color="{StaticResource OnPrimaryContainerColor}" />
+    <SolidColorBrush x:Key="SecondaryContainerBrush" Color="{StaticResource SecondaryContainerColor}" />
+    <SolidColorBrush x:Key="OnSecondaryContainerBrush" Color="{StaticResource OnSecondaryContainerColor}" />
+    <SolidColorBrush x:Key="OutlineBrush" Color="{StaticResource OutlineColor}" />
+    <SolidColorBrush x:Key="OutlineVariantBrush" Color="{StaticResource OutlineVariantColor}" />
+    <SolidColorBrush x:Key="SelectionBrush" Color="{StaticResource SelectionColor}" />
+    <SolidColorBrush x:Key="PickerBrush" Color="{StaticResource PickerColor}" />
+    <SolidColorBrush x:Key="ErrorContainerBrush" Color="{StaticResource ErrorContainerColor}" />
+    <SolidColorBrush x:Key="OnErrorContainerBrush" Color="{StaticResource OnErrorContainerColor}" />
+    <SolidColorBrush x:Key="WhiteBrush" Color="#FFFFFF" />
+
+    <!-- Deterministic cover colours, cycled by document id. -->
+    <SolidColorBrush x:Key="CoverBrush0" Color="#FFD8E4" />
+    <SolidColorBrush x:Key="CoverBrush1" Color="#E8DEF8" />
+    <SolidColorBrush x:Key="CoverBrush2" Color="#E6E0E9" />
+    <SolidColorBrush x:Key="CoverBrush3" Color="#EADDFF" />
+
+    <!-- Control chrome defaults. -->
+    <SolidColorBrush x:Key="ControlFillBrush" Color="#00000000" />
+    <SolidColorBrush x:Key="HoverOverlayBrush" Color="#0F1C1B1F" />
+    <SolidColorBrush x:Key="PressedOverlayBrush" Color="#1F1C1B1F" />
+
+</ResourceDictionary>

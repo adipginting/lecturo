@@ -1,0 +1,49 @@
+# --- Gradle / Kotlin / Android (lecturo-android, lecturo-relay) ---
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+.kotlin/
+local.properties
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+relay-quota.json
+relay-quota.json.tmp
+
+# --- .NET / Avalonia (lecturo-desktop) ---
+bin/
+obj/
+*.user
+*.suo
+
+# --- Node / Angular / pnpm (lecturo-web/web) ---
+node_modules/
+dist/
+.angular/
+.npm/
+*.tsbuildinfo
+
+# --- Go (lecturo-web/server) ---
+/server/bin/
+/server/tmp/
+/server/internal/infrastructure/webui/dist/*
+!/server/internal/infrastructure/webui/dist/.gitkeep
+
+# --- Environment ---
+.env
+.env.*
+
+# --- Logs ---
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# --- Editors / IDE ---
+.idea/
+.vscode/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db

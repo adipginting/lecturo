@@ -1,0 +1,222 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Lecturo.ViewModels"
+             x:Class="Lecturo.Views.LibraryView"
+             x:DataType="vm:LibraryViewModel"
+             DragDrop.AllowDrop="True">
+
+    <Grid>
+        <DockPanel Margin="40,32,32,24">
+
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="screenTitle" Text="Library" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8"
+                            VerticalAlignment="Center" IsVisible="{Binding IsLocalTab}">
+                    <Button Classes="text" Content="Cancel"
+                            IsVisible="{Binding IsSelecting}"
+                            Command="{Binding ToggleSelectModeCommand}" />
+                    <Button Classes="text"
+                            Content="{Binding SelectedCount, StringFormat='Delete selected ({0})'}"
+                            IsVisible="{Binding IsSelecting}"
+                            Command="{Binding DeleteSelectedCommand}" />
+                    <Button Classes="text" Content="Select"
+                            IsVisible="{Binding !IsSelecting}"
+                            Command="{Binding ToggleSelectModeCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Download from URL -->
+            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,18,0,0">
+                <TextBox Grid.Column="0" Width="432" Height="52" CornerRadius="4"
+                         HorizontalAlignment="Left" VerticalContentAlignment="Center"
+                         Text="{Binding DownloadUrl}"
+                         PlaceholderText="https://example.com/book.epub" />
+                <Button Grid.Column="1" Classes="pill" Width="120" Margin="16,0,0,0"
+                        Content="Download" Command="{Binding DownloadCommand}" />
+            </Grid>
+
+            <TextBlock DockPanel.Dock="Top" Classes="helper" Margin="0,10,0,0"
+                       Text="{Binding StatusMessage}"
+                       IsVisible="{Binding !!StatusMessage.Length}" />
+
+            <!-- Tabs -->
+            <Grid DockPanel.Dock="Top" RowDefinitions="Auto,Auto,Auto" Margin="0,16,0,0">
+                <Grid Grid.Row="0" ColumnDefinitions="*,*,*">
+                    <Button Grid.Column="0" Classes="tab" Content="Local"
+                            Classes.active="{Binding IsLocalTab}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Local" />
+                    <Button Grid.Column="1" Classes="tab" Content="Calibre"
+                            Classes.active="{Binding IsCalibreTab}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Calibre" />
+                    <Button Grid.Column="2" Classes="tab" Content="Zotero"
+                            Classes.active="{Binding IsZoteroTab}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Zotero" />
+                </Grid>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Height="3">
+                    <Border Grid.Column="0" Background="{StaticResource PrimaryBrush}" IsVisible="{Binding IsLocalTab}" />
+                    <Border Grid.Column="1" Background="{StaticResource PrimaryBrush}" IsVisible="{Binding IsCalibreTab}" />
+                    <Border Grid.Column="2" Background="{StaticResource PrimaryBrush}" IsVisible="{Binding IsZoteroTab}" />
+                </Grid>
+                <Border Grid.Row="2" Height="1" Background="{StaticResource OutlineVariantBrush}" />
+            </Grid>
+
+            <!-- Local documents -->
+            <ScrollViewer Margin="0,16,0,0" IsVisible="{Binding IsLocalTab}" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <StackPanel Margin="0,64,0,0" Spacing="10" HorizontalAlignment="Center"
+                                IsVisible="{Binding ShowLocalEmpty}">
+                        <Path Data="{StaticResource IconBook}" Width="40" Height="40" Stretch="Uniform"
+                              Fill="{StaticResource OutlineVariantBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Classes="sectionTitle" Text="No documents yet" HorizontalAlignment="Center" />
+                        <TextBlock Classes="helper" TextAlignment="Center" MaxWidth="380"
+                                   Text="Press + to import a PDF or EPUB, or paste a URL above to download one." />
+                    </StackPanel>
+                <ItemsControl ItemsSource="{Binding Documents}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DocumentItem">
+                            <Button Classes="card" Width="536" Margin="0,0,24,12"
+                                    Command="{Binding $parent[ItemsControl].((vm:LibraryViewModel)DataContext).ActivateCommand}"
+                                    CommandParameter="{Binding}">
+                                <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                                    <CheckBox Grid.Column="0" Margin="0,0,12,0" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsSelected}"
+                                              IsVisible="{Binding $parent[ItemsControl].((vm:LibraryViewModel)DataContext).IsSelecting}" />
+                                    <Border Grid.Column="1" Width="40" Height="56" CornerRadius="8"
+                                            Background="{Binding CoverBackground}" ClipToBounds="True"
+                                            VerticalAlignment="Center">
+                                        <Grid>
+                                            <TextBlock Text="{Binding Initial}" FontSize="18" FontWeight="SemiBold"
+                                                       Foreground="{Binding CoverForeground}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       IsVisible="{Binding !HasCover}" />
+                                            <Image Source="{Binding Cover}" Stretch="UniformToFill"
+                                                   IsVisible="{Binding HasCover}" />
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Margin="16,0" VerticalAlignment="Center" Spacing="6">
+                                        <TextBlock Classes="cardTitle" Text="{Binding Title}"
+                                                   MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="meta" Text="{Binding Meta}" />
+                                    </StackPanel>
+                                    <Button Grid.Column="3" Classes="icon" VerticalAlignment="Center"
+                                            ToolTip.Tip="Remove from library"
+                                            Command="{Binding $parent[ItemsControl].((vm:LibraryViewModel)DataContext).RequestDeleteCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Path Data="{StaticResource IconTrash}" Width="20" Height="20"
+                                              Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                    </Button>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Remote libraries: Calibre (OPDS) + Zotero (S7–S12) -->
+            <DockPanel Margin="0,16,0,0" IsVisible="{Binding IsRemoteTab}">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto,Auto" Margin="0,0,0,12">
+                    <Button Grid.Column="0" Classes="icon" ToolTip.Tip="Back to the catalog"
+                            IsVisible="{Binding CanGoBack}" Command="{Binding BackCatalogCommand}">
+                        <Path Data="{StaticResource IconBack}" Width="18" Height="18" Stretch="Uniform"
+                              Fill="{StaticResource OnSurfaceBrush}" />
+                    </Button>
+                    <TextBox Grid.Column="1" Margin="8,0,8,0"
+                             Text="{Binding RemoteSearch}" PlaceholderText="Search this library"
+                             KeyDown="OnRemoteSearchKey" />
+                    <Button Grid.Column="2" Classes="pill" Content="Search"
+                            Command="{Binding SearchRemoteCommand}" />
+                    <Button Grid.Column="3" Classes="pill" Margin="8,0,0,0" Content="Sync"
+                            Command="{Binding SyncRemoteCommand}" />
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top" Classes="helper" Margin="0,0,0,8"
+                           Text="{Binding RemoteStatus}" TextWrapping="Wrap"
+                           IsVisible="{Binding !!RemoteStatus.Length}" />
+
+                <ProgressBar DockPanel.Dock="Top" Height="3" IsIndeterminate="True"
+                             IsVisible="{Binding RemoteIsBusy}" Margin="0,0,0,10" />
+
+                <StackPanel Margin="0" Spacing="10" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            IsVisible="{Binding !RemoteHasItems}">
+                    <Path Data="{StaticResource IconDownload}" Width="40" Height="40" Stretch="Uniform"
+                          Fill="{StaticResource OutlineVariantBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Classes="sectionTitle" Text="{Binding RemoteTitle}" HorizontalAlignment="Center" />
+                    <TextBlock Classes="helper" TextAlignment="Center" MaxWidth="420"
+                               Text="Press Sync to list this library, or search it above. Configure the server in Settings." />
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding RemoteHasItems}">
+                    <ItemsControl ItemsSource="{Binding RemoteItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RemoteItemViewModel">
+                                <Button Classes="card" Margin="0,0,0,10"
+                                        Command="{Binding $parent[ItemsControl].((vm:LibraryViewModel)DataContext).OpenRemoteCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <Border Grid.Column="0" Width="40" Height="56" CornerRadius="8"
+                                                Background="{Binding CoverBackground}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Initial}" FontSize="18" FontWeight="SemiBold"
+                                                       Foreground="{Binding CoverForeground}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Margin="16,0" VerticalAlignment="Center" Spacing="6">
+                                            <TextBlock Classes="cardTitle" Text="{Binding Title}"
+                                                       MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="meta" Text="{Binding Meta}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                                                    VerticalAlignment="Center">
+                                            <Path Data="{StaticResource IconChevronRight}" Width="18" Height="18"
+                                                  Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}"
+                                                  IsVisible="{Binding IsCatalog}" />
+                                            <Path Data="{StaticResource IconDownload}" Width="18" Height="18"
+                                                  Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}"
+                                                  IsVisible="{Binding ShowDownload}" />
+                                            <Path Data="{StaticResource IconBookmark}" Width="18" Height="18"
+                                                  Stretch="Uniform" Fill="{StaticResource PrimaryBrush}"
+                                                  IsVisible="{Binding IsDownloaded}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </DockPanel>
+
+        <Button Classes="fab" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,40,40" ToolTip.Tip="Import documents"
+                Command="{Binding ImportCommand}">
+            <Path Data="{StaticResource IconAdd}" Width="24" Height="24" Stretch="Uniform"
+                  Fill="{StaticResource OnPrimaryContainerBrush}" />
+        </Button>
+
+        <!-- Delete confirmation (S6) -->
+        <Border IsVisible="{Binding IsConfirmingDelete}" Background="#66000000">
+            <Border Width="460" Padding="24" CornerRadius="16"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{StaticResource SurfaceBrush}"
+                    BoxShadow="0 8 24 0 #40000000">
+                <StackPanel Spacing="12">
+                    <TextBlock Classes="sectionTitle" Text="Delete this document?" />
+                    <TextBlock Classes="helper" TextWrapping="Wrap"
+                               Text="The local copy and its drafts will be removed. Remote libraries are not touched." />
+                    <TextBlock Classes="bodySm" Text="{Binding PendingDelete.Title}"
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right" Margin="0,8,0,0">
+                        <Button Classes="text" Content="Cancel" Command="{Binding CancelDeleteCommand}" />
+                        <Button Classes="primary" Content="Delete" Command="{Binding ConfirmDeleteCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Border>
+    </Grid>
+
+</UserControl>

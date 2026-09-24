@@ -1,0 +1,154 @@
+:host {
+  display: block;
+  height: 100%;
+  background: var(--l-surface);
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 12px 12px 4px;
+}
+
+.chat__title {
+  font-size: var(--l-subtitle-size);
+  font-weight: 600;
+}
+
+.chat__title--thread {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat__meta-left {
+  font-size: var(--l-meta-size);
+  color: var(--l-on-surface-variant);
+}
+
+.chat__meta-right {
+  margin-left: auto;
+  font-size: var(--l-meta-size);
+  color: var(--l-on-surface-variant);
+  white-space: nowrap;
+}
+
+.chat__more {
+  margin-left: 0;
+}
+
+.chat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 16px 16px;
+}
+
+.excerpt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--l-primary-container);
+  border-radius: var(--l-radius-card);
+}
+
+.excerpt__label {
+  font-size: var(--l-meta-size);
+  color: var(--l-on-surface-variant);
+}
+
+.excerpt__text {
+  font-size: var(--l-body-sm-size);
+}
+
+.excerpt__meta {
+  font-size: var(--l-meta-size);
+  color: var(--l-on-surface-variant);
+}
+
+.excerpt__image {
+  display: block;
+  width: 100%;
+  border-radius: var(--l-radius-small);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 8px 14px;
+  border: 1px solid var(--l-outline-variant);
+  border-radius: var(--l-radius-pill);
+  background: transparent;
+  color: var(--l-primary);
+  font-family: inherit;
+  font-size: var(--l-label-size);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.chip:hover {
+  background: var(--l-surface-container);
+}
+
+.bubble {
+  max-width: 88%;
+  padding: 12px 16px;
+  border-radius: var(--l-radius-card);
+  font-size: var(--l-body-sm-size);
+  line-height: 1.5;
+}
+
+.bubble--user {
+  align-self: flex-end;
+  background: var(--l-secondary-container);
+  color: var(--l-on-secondary-container);
+}
+
+.bubble--assistant {
+  align-self: flex-start;
+  background: var(--l-surface-container);
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 16px 16px;
+}
+
+.composer__input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 1px solid var(--l-outline);
+  border-radius: var(--l-radius-small);
+  background: var(--l-surface);
+  color: var(--l-on-surface);
+  font-family: inherit;
+  font-size: var(--l-body-size);
+}
+
+.composer__input:focus {
+  outline: none;
+  border-color: var(--l-primary);
+}
+
+.composer__send {
+  color: var(--l-primary);
+}

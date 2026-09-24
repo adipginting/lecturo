@@ -1,0 +1,37 @@
+// Angular Material 3 base theme, then overridden by the Lecturo design tokens.
+// The palette and typography come from docs/design/tokens.json (Penpot `Lecturo Web`).
+@use '@angular/material' as mat;
+
+html {
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$violet-palette,
+      ),
+      density: 0,
+    )
+  );
+}
+
+// Map Material's system variables onto our tokens so every Material component
+// renders in the Lecturo palette without regenerating palettes.
+:root {
+  --mat-sys-primary: var(--l-primary);
+  --mat-sys-on-primary: var(--l-white);
+  --mat-sys-primary-container: var(--l-primary-container);
+  --mat-sys-on-primary-container: var(--l-on-primary-container);
+
+  --mat-sys-secondary-container: var(--l-secondary-container);
+  --mat-sys-on-secondary-container: var(--l-on-secondary-container);
+
+  --mat-sys-surface: var(--l-surface);
+  --mat-sys-surface-container-low: var(--l-surface-low);
+  --mat-sys-surface-container: var(--l-surface-container);
+  --mat-sys-surface-container-high: var(--l-surface-high);
+  --mat-sys-on-surface: var(--l-on-surface);
+  --mat-sys-on-surface-variant: var(--l-on-surface-variant);
+
+  --mat-sys-outline: var(--l-outline);
+  --mat-sys-outline-variant: var(--l-outline-variant);
+}

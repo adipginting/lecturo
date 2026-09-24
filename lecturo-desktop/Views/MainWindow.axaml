@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Lecturo.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1320" d:DesignHeight="860"
+        x:Class="Lecturo.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1440" Height="900"
+        MinWidth="1040" MinHeight="640"
+        Title="Lecturo">
+
+    <Grid ColumnDefinitions="248,*,Auto">
+
+        <!-- Navigation rail -->
+        <Border Grid.Column="0"
+                Background="{StaticResource SurfaceContainerLowBrush}"
+                BorderBrush="{StaticResource OutlineVariantBrush}"
+                BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16,20,16,16" Spacing="2">
+                    <TextBlock Text="Lecturo" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Classes="metaSm" Text="Read · Save · Ask" />
+                </StackPanel>
+
+                <Border DockPanel.Dock="Bottom" Margin="12,12,12,20"
+                        Background="{StaticResource SurfaceContainerBrush}"
+                        CornerRadius="16" Padding="16,14">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="providerLabel" Text="CHAT PROVIDER" />
+                        <TextBlock Text="{Binding ChatPanel.SelectedProvider.DisplayName}"
+                                   FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Border>
+
+                <ListBox Classes="navRail"
+                         ItemsSource="{Binding NavItems}"
+                         SelectedItem="{Binding SelectedNav}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavItem">
+                            <StackPanel Orientation="Horizontal" Spacing="14" Margin="16,0">
+                                <Path Classes="navIcon" Data="{Binding Icon}"
+                                      Width="20" Height="20" Stretch="Uniform"
+                                      VerticalAlignment="Center" />
+                                <TextBlock Classes="navLabel" Text="{Binding Label}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <!-- Main content -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentView}" />
+
+        <!-- Docked chat panel -->
+        <Border Grid.Column="2"
+                Width="400"
+                IsVisible="{Binding IsChatPanelOpen}"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource OutlineVariantBrush}"
+                BorderThickness="1,0,0,0">
+            <ContentControl Content="{Binding ChatPanel}" />
+        </Border>
+    </Grid>
+
+</Window>

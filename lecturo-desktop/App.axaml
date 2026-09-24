@@ -1,0 +1,29 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lecturo.App"
+             xmlns:local="using:Lecturo"
+             RequestedThemeVariant="Light">
+
+    <Application.DataTemplates>
+        <local:ViewLocator />
+    </Application.DataTemplates>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://Lecturo/Styles/Tokens.axaml" />
+                <ResourceInclude Source="avares://Lecturo/Styles/Icons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <!-- Plus Jakarta Sans everywhere, including popups; reading surfaces
+             override with ReadingFont. -->
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        </Style>
+        <StyleInclude Source="avares://Lecturo/Styles/Controls.axaml" />
+    </Application.Styles>
+</Application>

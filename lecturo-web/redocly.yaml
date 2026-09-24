@@ -1,0 +1,7 @@
+extends:
+  - recommended
+
+rules:
+  # Errors are declared through the reusable `components/responses` entries where
+  # they are meaningful; not every happy-path operation needs its own 4xx.
+  operation-4xx-response: off

@@ -1,0 +1,53 @@
+@if (session.user()) {
+  <div class="shell" [attr.data-window]="layout.windowClass()">
+    @if (!layout.isCompact()) {
+      <nav class="rail" [class.rail--wide]="layout.isExpanded()" aria-label="Primary">
+        @if (layout.isExpanded()) {
+          <div class="brand">
+            <span class="brand__name">Lecturo</span>
+            <span class="brand__tag">Read · Save · Ask</span>
+          </div>
+        }
+
+        <ul class="rail__items">
+          @for (item of nav(); track item.path) {
+            <li>
+              <a class="nav-item" [routerLink]="item.path" routerLinkActive="nav-item--active">
+                <span class="ms nav-item__icon">{{ item.icon }}</span>
+                <span class="nav-item__label">{{ item.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+
+        @if (layout.isExpanded()) {
+          <div class="provider">
+            <span class="provider__label">CHAT PROVIDER</span>
+            <span class="provider__name">{{ provider }}</span>
+          </div>
+        }
+      </nav>
+    }
+
+    <main class="content">
+      <router-outlet />
+    </main>
+
+    @if (layout.isCompact()) {
+      <nav class="bottom-nav" aria-label="Primary">
+        @for (item of nav(); track item.path) {
+          <a
+            class="bottom-nav__item"
+            [routerLink]="item.path"
+            routerLinkActive="bottom-nav__item--active"
+          >
+            <span class="ms">{{ item.icon }}</span>
+            <span class="bottom-nav__label">{{ item.label }}</span>
+          </a>
+        }
+      </nav>
+    }
+  </div>
+} @else {
+  <router-outlet />
+}

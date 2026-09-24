@@ -1,0 +1,47 @@
+# Local development services for lecturo-web.
+#
+#   docker compose up -d
+#
+# then point the server at them:
+#
+#   DATABASE_URL="postgres://postgres:postgres@localhost:55433/lecturo?sslmode=disable" \
+#   BLOB_ENDPOINT="localhost:8333" \
+#   BLOB_ACCESS_KEY="any" BLOB_SECRET_KEY="any" \
+#   BLOB_BUCKET="lecturo" BLOB_REGION="us-east-1" \
+#   go run ./server
+#
+# In production the same BlobStore speaks to Cloudflare R2
+# (BLOB_ENDPOINT="<accountid>.r2.cloudflarestorage.com", BLOB_REGION="auto",
+#  BLOB_USE_SSL=true, BLOB_VIRTUAL_HOST=true).
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lecturo
+    ports:
+      - '55433:5432'
+    volumes:
+      - pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d lecturo']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # SeaweedFS with its S3 gateway — an S3-compatible endpoint for local dev.
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    command: server -s3 -s3.config=/etc/seaweedfs/s3.json -dir=/data
+    ports:
+      - '8333:8333' # S3 API
+      - '9333:9333' # master
+      - '8888:8888' # filer
+    volumes:
+      - seaweed:/data
+      - ./dev/seaweedfs-s3.json:/etc/seaweedfs/s3.json:ro
+
+volumes:
+  pg:
+  seaweed:

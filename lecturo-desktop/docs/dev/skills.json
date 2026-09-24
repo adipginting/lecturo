@@ -1,0 +1,37 @@
+{
+  "skills": [
+    {
+      "id": "summarize",
+      "name": "Summarize chapter",
+      "description": "Summarize the current chapter in a few bullet points.",
+      "author": "Lecturo",
+      "version": "1.0",
+      "scope": "message",
+      "trigger": "on_demand",
+      "prompt": "Summarize the following text into concise bullet points.",
+      "price": "free"
+    },
+    {
+      "id": "explain",
+      "name": "Explain simply",
+      "description": "Explain the passage in plain language.",
+      "author": "Lecturo",
+      "version": "1.0",
+      "scope": "message",
+      "trigger": "on_demand",
+      "prompt": "Explain the following text in plain, simple language.",
+      "price": "free"
+    },
+    {
+      "id": "themes",
+      "name": "Find themes",
+      "description": "List the recurring themes in this chapter.",
+      "author": "A. Author",
+      "version": "0.9",
+      "scope": "conversation",
+      "trigger": "on_demand",
+      "prompt": "List the recurring themes.",
+      "price": "paid"
+    }
+  ]
+}

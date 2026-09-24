@@ -1,0 +1,240 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Lecturo.ViewModels"
+             xmlns:settings="using:Lecturo.Application.Settings"
+             xmlns:ctl="using:Lecturo.Controls"
+             xmlns:models="using:Lecturo.Domain"
+             xmlns:chat="using:Lecturo.Domain.Chat"
+             x:Class="Lecturo.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <ScrollViewer>
+        <StackPanel MaxWidth="720" Margin="40,36,40,48">
+
+            <TextBlock Classes="screenTitle" Text="Settings" />
+
+            <TextBlock Classes="helper" Margin="0,10,0,0" Text="{Binding SecretWarning}"
+                       Foreground="DarkOrange" IsVisible="{Binding !!SecretWarning}" />
+
+            <!-- Chat providers -->
+            <TextBlock Classes="sectionTitle" Text="Chat provider" Margin="0,28,0,0" />
+
+            <ListBox Classes="providers" Margin="0,8,0,0"
+                     ItemsSource="{Binding Providers}"
+                     SelectedItem="{Binding SelectedProvider}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="settings:ProviderInfo">
+                        <StackPanel Orientation="Horizontal" Spacing="16" Margin="4,0">
+                            <Grid Width="20" Height="20" VerticalAlignment="Center">
+                                <Ellipse Classes="ring" Width="20" Height="20" />
+                                <Ellipse Classes="dot" Width="8" Height="8"
+                                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Grid>
+                            <TextBlock Classes="providerLabel" Text="{Binding DisplayName}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Spacing="12" Margin="0,16,0,0">
+                <ctl:FieldBox Label="Base URL (optional)" Text="{Binding BaseUrl}" />
+                <ctl:FieldBox Label="{Binding KeyFieldLabel}" Text="{Binding ApiKey}" IsPassword="True"
+                              IsVisible="{Binding IsKeyRequired}" />
+                <ctl:FieldBox Label="Model (optional)" Text="{Binding Model}" />
+            </StackPanel>
+
+            <Border Margin="0,12,0,0" Padding="14,12"
+                    Background="{StaticResource SurfaceContainerBrush}"
+                    BorderBrush="{StaticResource OutlineVariantBrush}" BorderThickness="1"
+                    CornerRadius="4" IsVisible="{Binding IsLecturoCloud}">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="Lecturo Cloud relay" />
+                    <TextBlock Classes="helper" TextWrapping="Wrap"
+                               Text="Point the Base URL at the relay (for example http://localhost:8787). No API key is needed — the install id below is sent as the bearer token." />
+                    <TextBlock Classes="metaSm" Text="{Binding DeviceId, StringFormat='Device id: {0}'}"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+
+            <Grid ColumnDefinitions="Auto,Auto,*" Margin="0,12,0,0">
+                <Button Grid.Column="0" Classes="text" Content="Fetch model list"
+                        Command="{Binding FetchModelsCommand}" />
+                <ComboBox Grid.Column="1" Margin="16,0,0,0" MinWidth="260" HorizontalAlignment="Left"
+                          IsVisible="{Binding HasModels}"
+                          PlaceholderText="Choose from fetched models"
+                          ItemsSource="{Binding AvailableModels}"
+                          SelectedItem="{Binding ChosenModel}" />
+                <TextBlock Grid.Column="2" Classes="helper" VerticalAlignment="Center" Margin="16,0,0,0"
+                           Text="{Binding ModelsAction}" />
+            </Grid>
+
+            <Button Classes="primary" Content="Save provider" Margin="0,16,0,0"
+                    HorizontalAlignment="Left" Command="{Binding SaveProviderCommand}" />
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,24,0,0" MaxWidth="720" HorizontalAlignment="Left">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="sectionTitle" Text="Current model supports images" />
+                    <TextBlock Classes="helper" Text="{Binding VisionHint}" />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
+                              IsChecked="{Binding SupportsImages}" />
+            </Grid>
+
+            <StackPanel Margin="0,16,0,0" MaxWidth="720" HorizontalAlignment="Left">
+                <ctl:FieldBox Label="Compact chats above (tokens)" Text="{Binding ContextThresholdText}" />
+                <TextBlock Classes="helper" Margin="0,6,0,0" TextWrapping="Wrap"
+                           Text="Leave this at 8000 to let the model decide — its window sets the budget, less room for the reply. Any other number is your own limit, and wins." />
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,24,0,0" MaxWidth="720" HorizontalAlignment="Left">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Classes="sectionTitle" Text="Typeset formulas" />
+                    <TextBlock Classes="helper"
+                               Text="TeX in a reply — \( … \) inline, \[ … \] display — is typeset by the bundled KaTeX. Off, it shows as written." />
+                </StackPanel>
+                <ToggleSwitch Grid.Column="1" VerticalAlignment="Center"
+                              IsChecked="{Binding TypesetFormulas}" />
+            </Grid>
+
+            <Border Height="1" Background="{StaticResource OutlineVariantBrush}" Margin="0,32,0,0" />
+
+            <!-- Servers -->
+            <TextBlock Classes="sectionTitle" Text="Servers" Margin="0,28,0,0" />
+
+            <StackPanel Spacing="12" Margin="0,12,0,0">
+                <ctl:FieldBox Label="Calibre Content Server URL" Text="{Binding CalibreUrl}" />
+                <ctl:FieldBox Label="Calibre username" Text="{Binding CalibreUsername}" />
+                <ctl:FieldBox Label="Calibre password (leave blank to keep)" Text="{Binding CalibrePassword}" IsPassword="True" />
+                <ctl:FieldBox Label="Zotero user ID" Text="{Binding ZoteroUserId}" />
+                <ctl:FieldBox Label="Zotero API base (optional)" Text="{Binding ZoteroBaseUrl}" />
+                <ctl:FieldBox Label="Zotero API key (leave blank to keep)" Text="{Binding ZoteroApiKey}" IsPassword="True" />
+            </StackPanel>
+
+            <Button Classes="primary" Content="Save servers" Margin="0,16,0,0"
+                    HorizontalAlignment="Left" Command="{Binding SaveServersCommand}" />
+
+            <Border Height="1" Background="{StaticResource OutlineVariantBrush}" Margin="0,32,0,0" />
+
+            <!-- Prompts: reusable prompt templates, picked per conversation. -->
+            <TextBlock Classes="sectionTitle" Text="Prompts" Margin="0,28,0,0" />
+            <TextBlock Classes="helper" Margin="0,6,0,0"
+                       Text="Prompt templates appear as chips above the chat composer. Tapping a chip sends it with whatever is typed." />
+
+            <ItemsControl ItemsSource="{Binding Prompts}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="chat:Prompt">
+                        <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                                    <TextBlock Classes="cardTitle" Text="{Binding Name}" />
+                                    <TextBlock Classes="meta" Text="{Binding Content}"
+                                               MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="2"
+                                            VerticalAlignment="Top">
+                                    <Button Classes="icon" ToolTip.Tip="Edit"
+                                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).EditPromptCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Path Data="{StaticResource IconEdit}" Width="18" Height="18"
+                                              Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                    </Button>
+                                    <Button Classes="icon" ToolTip.Tip="Delete"
+                                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).DeletePromptCommand}"
+                                            CommandParameter="{Binding}">
+                                        <Path Data="{StaticResource IconTrash}" Width="18" Height="18"
+                                              Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel Spacing="12" Margin="0,8,0,0" MaxWidth="560" HorizontalAlignment="Left">
+                <ctl:FieldBox Label="Prompt name" Text="{Binding NewPromptName}" />
+                <Border Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource OutlineBrush}"
+                        BorderThickness="1" CornerRadius="4" Padding="12,8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="Prompt content" />
+                        <TextBox Classes="fieldInput" AcceptsReturn="True" TextWrapping="Wrap"
+                                 MinHeight="90" Text="{Binding NewPromptContent}" />
+                    </StackPanel>
+                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button Classes="pill" Content="Save prompt" Command="{Binding AddPromptCommand}" />
+                    <Button Classes="text" Content="Update selected" Command="{Binding UpdatePromptCommand}" />
+                </StackPanel>
+            </StackPanel>
+
+            <Border Height="1" Background="{StaticResource OutlineVariantBrush}" Margin="0,32,0,0" />
+
+            <!-- Skills -->
+            <TextBlock Classes="sectionTitle" Text="Skills" Margin="0,28,0,0" />
+            <TextBlock Classes="helper" Margin="0,6,0,0"
+                       Text="Install book-level skills from a marketplace. Installed skills run from the reader against the book you're reading." />
+
+            <Grid ColumnDefinitions="*,Auto" Margin="0,12,0,0" MaxWidth="720" HorizontalAlignment="Left">
+                <ctl:FieldBox Grid.Column="0" Label="Marketplace URL" Text="{Binding MarketplaceUrl}" />
+                <Button Grid.Column="1" Classes="pill" Margin="12,0,0,0" Content="Browse"
+                        Command="{Binding BrowseSkillsCommand}" />
+            </Grid>
+
+            <TextBlock Classes="helper" Margin="0,10,0,0" Text="{Binding SkillStatus}"
+                       IsVisible="{Binding !!SkillStatus.Length}" />
+            <ProgressBar Height="3" IsIndeterminate="True" IsVisible="{Binding SkillsBusy}"
+                         Margin="0,8,0,0" MaxWidth="720" HorizontalAlignment="Left" />
+
+            <ItemsControl ItemsSource="{Binding CatalogSkills}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:RemoteSkill">
+                        <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                                    <TextBlock Classes="cardTitle" Text="{Binding Name}" />
+                                    <TextBlock Classes="meta" Text="{Binding Description}"
+                                               MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="metaSm" Text="{Binding Meta}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Classes="text" Content="Install" VerticalAlignment="Center"
+                                        Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).InstallSkillCommand}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ItemsControl ItemsSource="{Binding InstalledSkills}" Margin="0,8,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:Skill">
+                        <Border Classes="card" Padding="14,12" Margin="0,0,0,8">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" Spacing="4" Margin="0,0,12,0">
+                                    <TextBlock Classes="cardTitle" Text="{Binding Name}" />
+                                    <TextBlock Classes="meta" Text="{Binding Description}"
+                                               MaxLines="2" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="metaSm" Text="{Binding Scope}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                            VerticalAlignment="Center">
+                                    <Button Classes="text" Content="Enable / disable"
+                                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).ToggleSkillCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="text" Content="Remove"
+                                            Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).UninstallSkillCommand}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Classes="helper" Margin="0,24,0,0" Text="{Binding StatusMessage}"
+                       IsVisible="{Binding !!StatusMessage.Length}" />
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

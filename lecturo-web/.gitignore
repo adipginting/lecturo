@@ -1,0 +1,18 @@
+# Node / Angular
+/web/node_modules/
+/web/dist/
+/web/.angular/
+*.log
+
+# Go
+/server/bin/
+/server/tmp/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Embedded web UI: built by `make web`; only the directory marker is tracked.
+/server/internal/infrastructure/webui/dist/*
+!/server/internal/infrastructure/webui/dist/.gitkeep

@@ -1,0 +1,77 @@
+<section
+  class="chats"
+  [class.chats--split]="layout.isExpanded() && selected()"
+  [attr.data-window]="layout.windowClass()"
+>
+  <div class="chats__list">
+    <div class="screen__bar">
+      <h1 class="screen__title">Chats</h1>
+    </div>
+
+    <nav class="tabs">
+      @for (item of tabs; track item) {
+        <button class="tab" [class.tab--active]="item === tab()" (click)="setTab(item)">
+          {{ item }}
+        </button>
+      }
+    </nav>
+
+    @if (tab() === 'Drafts') {
+      <p class="screen__sub">
+        Drafts wait here until their first reply lands; then they become conversations.
+      </p>
+    }
+
+    @if (error()) {
+      <p class="banner-error" role="alert">{{ error() }}</p>
+    }
+
+    @if (conversations().length === 0 && !busy()) {
+      <p class="screen__sub" style="margin-top: 20px">
+        Nothing here yet. Select a passage while reading and choose Ask AI.
+      </p>
+    }
+
+    <div class="stack" style="margin-top: 20px">
+      @for (conversation of conversations(); track conversation.id) {
+        <article
+          class="card"
+          [class.card--active]="conversation.id === selectedId()"
+          (click)="select(conversation)"
+          style="cursor: pointer"
+        >
+          <span class="card__title">{{ conversation.title }}</span>
+          <span class="card__meta">{{ conversation.excerpt || 'A screenshot' }}</span>
+          <span class="card__meta">
+            {{ conversation.documentTitle || 'No document' }} · {{ conversation.provider }}
+          </span>
+          <div class="card__actions">
+            @if (tab() === 'Conversations') {
+              <button class="icon-btn" aria-label="Rename" (click)="rename(conversation, $event)">
+                <span class="ms">edit</span>
+              </button>
+            }
+            <button class="icon-btn" aria-label="Delete" (click)="remove(conversation, $event)">
+              <span class="ms">delete</span>
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+
+  @if (selected(); as conversation) {
+    <div class="chats__panel">
+      <app-chat-panel
+        [mode]="conversation.isDraft ? 'draft' : 'conversation'"
+        [conversationId]="conversation.id"
+        [documentId]="conversation.documentId ?? null"
+        [excerpt]="conversation.excerpt"
+        [imageId]="conversation.contextImageId ?? null"
+        [provider]="conversation.provider"
+        (close)="closePanel()"
+        (started)="onSent()"
+      />
+    </div>
+  }
+</section>

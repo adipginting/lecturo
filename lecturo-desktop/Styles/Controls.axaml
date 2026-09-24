@@ -1,0 +1,421 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===================== Typography ===================== -->
+    <Style Selector="Window">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.screenTitle">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.readerTitle">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="MaxLines" Value="2" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style Selector="TextBlock.sectionTitle">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style Selector="TextBlock.cardTitle">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="LineHeight" Value="20" />
+    </Style>
+
+    <Style Selector="TextBlock.providerLabel">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.bodySm">
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+    <Style Selector="TextBlock.excerpt">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="LineHeight" Value="20" />
+    </Style>
+
+    <Style Selector="TextBlock.excerptLg">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="LineHeight" Value="20" />
+    </Style>
+
+    <Style Selector="TextBlock.meta">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+        <Setter Property="LineHeight" Value="16" />
+    </Style>
+
+    <Style Selector="TextBlock.metaSm">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.accent">
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.onAccent">
+        <Setter Property="Foreground" Value="{StaticResource OnPrimaryContainerBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.fieldLabel">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.actionLabel">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="TextBlock.helper">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+
+    <!-- ===================== Reader ===================== -->
+    <Style Selector="TextBlock.chapterTitle">
+        <Setter Property="FontFamily" Value="{StaticResource ReadingFont}" />
+        <Setter Property="FontSize" Value="26" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="LineHeight" Value="36" />
+    </Style>
+
+    <Style Selector="TextBlock.readingBody">
+        <Setter Property="FontFamily" Value="{StaticResource ReadingFont}" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="LineHeight" Value="30" />
+    </Style>
+
+    <!-- ===================== Buttons ===================== -->
+    <Style Selector="Button">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Padding" Value="16,8" />
+        <Setter Property="MinHeight" Value="36" />
+        <!-- Content is centred in both axes, like Tailwind's items-center/justify-center. -->
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style Selector="Button.icon">
+        <Setter Property="Width" Value="40" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+    </Style>
+    <Style Selector="Button.icon:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PressedOverlayBrush}" />
+    </Style>
+
+    <Style Selector="Button.text">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="CornerRadius" Value="16" />
+    </Style>
+    <Style Selector="Button.text:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.fab">
+        <Setter Property="Width" Value="56" />
+        <Setter Property="Height" Value="56" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="28" />
+        <Setter Property="Background" Value="{StaticResource PrimaryContainerBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.fab:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SelectionBrush}" />
+    </Style>
+
+    <Style Selector="Button.pill">
+        <Setter Property="Background" Value="{StaticResource PrimaryContainerBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource OnPrimaryContainerBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Height" Value="52" />
+        <Setter Property="Padding" Value="24,0" />
+        <Setter Property="CornerRadius" Value="26" />
+    </Style>
+
+    <Style Selector="Button.chip">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{StaticResource OutlineVariantBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Height" Value="32" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.chip:pointerover /template/ ContentPresenter">
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="Button.primary">
+        <Setter Property="Background" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="FontWeight" Value="Medium" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="20,0" />
+        <Setter Property="CornerRadius" Value="20" />
+    </Style>
+
+    <!-- ===================== Nav rail ===================== -->
+    <Style Selector="ListBox.navRail">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,2" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="CornerRadius" Value="22" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SecondaryContainerBrush}" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem TextBlock.navLabel">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem:selected TextBlock.navLabel">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource OnSecondaryContainerBrush}" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem Path.navIcon">
+        <Setter Property="Fill" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+    <Style Selector="ListBox.navRail ListBoxItem:selected Path.navIcon">
+        <Setter Property="Fill" Value="{StaticResource OnSecondaryContainerBrush}" />
+    </Style>
+
+    <!-- ===================== Tabs ===================== -->
+    <Style Selector="Button.tab">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="MinHeight" Value="44" />
+        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+    <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.tab:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource PressedOverlayBrush}" />
+        <Setter Property="CornerRadius" Value="8" />
+    </Style>
+    <Style Selector="Button.tab.active">
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <!-- ===================== Cards ===================== -->
+    <Style Selector="ItemsControl.stretch ContentPresenter">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource SurfaceContainerBrush}" />
+        <Setter Property="CornerRadius" Value="16" />
+    </Style>
+
+    <Style Selector="Button.card">
+        <Setter Property="Background" Value="{StaticResource SurfaceContainerBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="20" />
+        <Setter Property="MinHeight" Value="96" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontWeight" Value="Normal" />
+    </Style>
+
+    <Style Selector="Button.plain">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.plain:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.card:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SurfaceContainerHighBrush}" />
+    </Style>
+    <Style Selector="Button.card:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource SelectionBrush}" />
+    </Style>
+
+    <!-- ===================== Provider radios ===================== -->
+    <Style Selector="ListBox.providers">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBox.providers ListBoxItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,5" />
+        <Setter Property="MinHeight" Value="30" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="CornerRadius" Value="15" />
+    </Style>
+    <Style Selector="ListBox.providers ListBoxItem /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.providers ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+    </Style>
+    <Style Selector="ListBox.providers Ellipse.ring">
+        <Setter Property="Stroke" Value="{StaticResource OutlineBrush}" />
+        <Setter Property="StrokeThickness" Value="2" />
+        <Setter Property="Fill" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.providers Ellipse.dot">
+        <Setter Property="Fill" Value="{StaticResource PrimaryBrush}" />
+        <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="ListBox.providers ListBoxItem:selected Ellipse.ring">
+        <Setter Property="Stroke" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+    <Style Selector="ListBox.providers ListBoxItem:selected Ellipse.dot">
+        <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="ListBox.providers TextBlock.providerLabel">
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- ===================== Fields ===================== -->
+    <Style Selector="TextBox.fieldInput">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="CaretBrush" Value="{StaticResource PrimaryBrush}" />
+    </Style>
+
+    <Style Selector="RadioButton.provider">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+
+    <!-- ===================== Chat bubbles ===================== -->
+    <Style Selector="Border.bubble">
+        <Setter Property="Background" Value="{StaticResource SurfaceContainerHighBrush}" />
+        <Setter Property="CornerRadius" Value="16" />
+        <Setter Property="Padding" Value="14,10" />
+        <Setter Property="MaxWidth" Value="320" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="Border.bubble.user">
+        <Setter Property="Background" Value="{StaticResource PrimaryContainerBrush}" />
+        <Setter Property="HorizontalAlignment" Value="Right" />
+    </Style>
+    <Style Selector="Border.bubble.dim">
+        <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Border.bubble TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceBrush}" />
+    </Style>
+    <Style Selector="Border.bubble.user TextBlock">
+        <Setter Property="Foreground" Value="{StaticResource OnPrimaryContainerBrush}" />
+    </Style>
+
+    <!-- ===================== Misc ===================== -->
+    <Style Selector="TextBlock.contextCounter">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{StaticResource OnSurfaceVariantBrush}" />
+    </Style>
+    <Style Selector="TextBlock.contextCounter.over">
+        <Setter Property="Foreground" Value="#B3261E" />
+    </Style>
+    <Style Selector="ComboBox.chapterPicker">
+        <Setter Property="Background" Value="{StaticResource SecondaryContainerBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource OnSecondaryContainerBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="20" />
+        <Setter Property="Height" Value="40" />
+        <Setter Property="Padding" Value="16,0" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+    <Style Selector="ItemsControl.plain ListBoxItem">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="ScrollViewer">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <Style Selector="TextBox.mono">
+        <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+
+</Styles>

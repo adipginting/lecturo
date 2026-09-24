@@ -1,0 +1,82 @@
+<section class="chat">
+  <header class="chat__head">
+    <button class="icon-btn" aria-label="Close" (click)="close.emit()">
+      <span class="ms">arrow_back</span>
+    </button>
+    <span class="chat__title">
+      {{ mode() === 'draft' ? 'New chat' : 'Chat' }}
+    </span>
+    <span class="chat__meta-right">
+      @if (provider()) {
+        {{ provider() }}
+        @if (destination()) {
+          · {{ destination() }}
+        }
+      }
+      @if (sending()) {
+        · Streaming…
+      }
+    </span>
+  </header>
+
+  <div class="chat__body">
+    @if (imageSrc()) {
+      <article class="excerpt">
+        <span class="excerpt__label">Screenshot</span>
+        <img class="excerpt__image" [src]="imageSrc()" alt="Captured passage" />
+      </article>
+    }
+    @if (excerpt()) {
+      <article class="excerpt">
+        <span class="excerpt__label">Original excerpt</span>
+        <span class="excerpt__text">{{ excerpt() }}</span>
+      </article>
+    }
+
+    @for (message of messages(); track message.id) {
+      <div
+        class="bubble"
+        [class.bubble--user]="message.role === 'user'"
+        [class.bubble--assistant]="message.role !== 'user'"
+      >
+        {{ message.content }}
+      </div>
+    }
+    @if (streamingText()) {
+      <div class="bubble bubble--assistant">{{ streamingText() }}</div>
+    }
+
+    @if (messages().length === 0 && !streamingText() && prompts().length > 0) {
+      <div class="chips">
+        @for (prompt of prompts(); track prompt.id) {
+          <button class="chip" [disabled]="sending()" (click)="usePrompt(prompt)">
+            {{ prompt.title }}
+          </button>
+        }
+      </div>
+    }
+
+    @if (error()) {
+      <p class="banner-error" role="alert">{{ error() }}</p>
+    }
+  </div>
+
+  <footer class="composer">
+    <input
+      class="composer__input"
+      placeholder="Ask about this excerpt"
+      [value]="composer()"
+      (input)="composer.set(fieldValue($event))"
+      (keydown)="onKeydown($event)"
+      [disabled]="sending()"
+    />
+    <button
+      class="icon-btn composer__send"
+      aria-label="Send"
+      [disabled]="sending()"
+      (click)="send()"
+    >
+      <span class="ms">send</span>
+    </button>
+  </footer>
+</section>

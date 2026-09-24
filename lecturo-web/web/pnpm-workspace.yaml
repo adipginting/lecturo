@@ -1,0 +1,8 @@
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  # Postinstall-only scripts from epubjs's transitive deps; nothing to build.
+  core-js: false
+  es5-ext: false

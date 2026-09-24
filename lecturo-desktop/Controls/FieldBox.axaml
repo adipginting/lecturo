@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lecturo.Controls.FieldBox"
+             x:Name="Root">
+
+    <Border Background="{StaticResource SurfaceBrush}"
+            BorderBrush="{StaticResource OutlineBrush}"
+            BorderThickness="1"
+            CornerRadius="4"
+            Padding="12,7"
+            MinHeight="56">
+        <Grid RowDefinitions="Auto,*">
+            <TextBlock Classes="fieldLabel" Text="{Binding #Root.Label}" />
+            <TextBox x:Name="Input"
+                     Grid.Row="1"
+                     Classes="fieldInput"
+                     Text="{Binding #Root.Text, Mode=TwoWay}" />
+        </Grid>
+    </Border>
+
+</UserControl>

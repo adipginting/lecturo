@@ -1,0 +1,1058 @@
+openapi: 3.1.0
+info:
+  title: Lecturo Web API
+  version: 0.1.0
+  description: |
+    The Go backend for the Lecturo responsive web client.
+
+    Design decisions (settled):
+    - REST/JSON, SSE for streaming completions.
+    - Multi-user accounts; every resource is scoped to the authenticated user.
+    - Auth is email + password (Argon2id) with server sessions in httpOnly cookies,
+      CSRF-protected on state-changing requests.
+    - Provider API keys are held server-side; the browser never sees one.
+    - Calibre (OPDS) and Zotero are proxied server-side.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: /api/v1
+    description: Same-origin API
+
+tags:
+  - name: auth
+    description: Accounts and sessions.
+  - name: documents
+    description: The app-owned library; PDF and EPUB files copied into server storage.
+  - name: prompts
+    description: Reusable prompt templates (capped at twelve).
+  - name: conversations
+    description: Per-excerpt chats and their messages; server-side streaming.
+  - name: provider
+    description: LLM provider selection and credentials (keys never leave the server).
+  - name: remote
+    description: Calibre and Zotero catalogs, proxied so credentials stay server-side.
+  - name: servers
+    description: Calibre and Zotero connection details (passwords never returned).
+  - name: images
+    description: Screenshot crops used as a conversation's frozen context.
+
+security:
+  - sessionCookie: []
+
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Create an account
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12 }
+      responses:
+        '201':
+          description: Account created and signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Sign in
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Signed in; session cookie set
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Sign out
+      operationId: logout
+      responses:
+        '204': { description: Session destroyed }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current user
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /documents:
+    get:
+      tags: [documents]
+      summary: List documents
+      operationId: listDocuments
+      parameters:
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/cursor'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Document' }
+                  nextCursor: { type: [string, 'null'] }
+    post:
+      tags: [documents]
+      summary: Upload a PDF or EPUB (import = copy into app storage)
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+
+  /documents/import-url:
+    post:
+      tags: [documents]
+      summary: Download a document from a URL (payload sniffed, follows download pages)
+      operationId: importDocumentFromUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, format: uri }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /documents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    get:
+      tags: [documents]
+      summary: Get a document
+      operationId: getDocument
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [documents]
+      summary: Delete the local copy (conversations keep their excerpt trace)
+      operationId: deleteDocument
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /documents/{id}/file:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    get:
+      tags: [documents]
+      summary: Stream the document bytes (used by the in-browser reader)
+      operationId: getDocumentFile
+      responses:
+        '200':
+          description: Success
+          content:
+            application/pdf: {}
+            application/epub+zip: {}
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /documents/{id}/position:
+    parameters:
+      - $ref: '#/components/parameters/documentId'
+    put:
+      tags: [documents]
+      summary: Persist the last-read position
+      operationId: updateDocumentPosition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [locator]
+              properties:
+                locator:
+                  type: string
+                  description: Opaque; PDF = page number, EPUB = CFI
+      responses:
+        '204': { description: Stored }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /prompts:
+    get:
+      tags: [prompts]
+      summary: List saved prompts
+      operationId: listPrompts
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SavedPrompt' }
+    post:
+      tags: [prompts]
+      summary: Create a saved prompt (capped at twelve)
+      operationId: createPrompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, body]
+              properties:
+                title: { type: string }
+                body: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedPrompt' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /prompts/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [prompts]
+      summary: Update a saved prompt
+      operationId: updatePrompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                body: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SavedPrompt' }
+    delete:
+      tags: [prompts]
+      summary: Delete a saved prompt
+      operationId: deletePrompt
+      responses:
+        '204': { description: Deleted }
+
+  /conversations:
+    get:
+      tags: [conversations]
+      summary: List conversations (newest first), optionally only drafts or only sent
+      operationId: listConversations
+      parameters:
+        - name: documentId
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Conversation' }
+    post:
+      tags: [conversations]
+      summary: Start a draft from an excerpt or a screenshot crop
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Provide an `excerpt`, an `imageId`, or both.
+              properties:
+                documentId: { type: [string, 'null'] }
+                excerpt: { type: string }
+                locator: { type: [string, 'null'] }
+                promptId: { type: [string, 'null'] }
+                imageId: { type: [string, 'null'] }
+                provider: { $ref: '#/components/schemas/ProviderId' }
+                model: { type: [string, 'null'] }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+
+  /conversations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/conversationId'
+    get:
+      tags: [conversations]
+      summary: Get a conversation with its messages
+      operationId: getConversation
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConversationWithMessages' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [conversations]
+      summary: Rename, switch provider/model
+      operationId: updateConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, minLength: 1 }
+                provider: { $ref: '#/components/schemas/ProviderId' }
+                model: { type: [string, 'null'] }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Conversation' }
+    delete:
+      tags: [conversations]
+      summary: Delete a conversation and its messages
+      operationId: deleteConversation
+      responses:
+        '204': { description: Deleted }
+
+  /conversations/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/conversationId'
+    get:
+      tags: [conversations]
+      summary: List messages
+      operationId: listMessages
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Message' }
+    post:
+      tags: [conversations]
+      summary: Send a message; streams the assistant reply over SSE when stream=true
+      operationId: createMessage
+      parameters:
+        - name: stream
+          in: query
+          schema: { type: boolean, default: true }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: |
+            With `stream=true`, `text/event-stream` with named events:
+            `delta` (`{ "text": "..." }`), `done` (`{ "message": Message }`),
+            `error` (`{ "error": Error }`). With `stream=false`, a JSON Message.
+          content:
+            text/event-stream:
+              schema: { type: string }
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '429':
+          description: Provider quota exhausted (Lecturo Cloud)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /conversations/{id}/compact:
+    parameters:
+      - $ref: '#/components/parameters/conversationId'
+    post:
+      tags: [conversations]
+      summary: Summarise older messages; originals are marked superseded
+      operationId: compactConversation
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '422':
+          description: Nothing to compact yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /skills:
+    get:
+      tags: [skills]
+      summary: List installed skills
+      operationId: listSkills
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Skill' }
+    post:
+      tags: [skills]
+      summary: Install a skill from the marketplace
+      operationId: installSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RemoteSkill' }
+      responses:
+        '204': { description: Installed }
+
+  /skills/browse:
+    post:
+      tags: [skills]
+      summary: Browse a skills marketplace
+      operationId: browseSkills
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/RemoteSkill' }
+
+  /skills/runs:
+    get:
+      tags: [skills]
+      summary: List recent skill runs, optionally for one document
+      operationId: listSkillRuns
+      parameters:
+        - name: documentId
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/SkillRun' }
+
+  /skills/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    patch:
+      tags: [skills]
+      summary: Enable or disable an installed skill
+      operationId: setSkillEnabled
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '204': { description: Updated }
+    delete:
+      tags: [skills]
+      summary: Uninstall a skill
+      operationId: deleteSkill
+      responses:
+        '204': { description: Removed }
+
+  /provider:
+    get:
+      tags: [provider]
+      summary: Configured providers and the selected one (no secrets)
+      operationId: getProviderSettings
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderSettings' }
+    put:
+      tags: [provider]
+      summary: Save the provider selection, base URL, model and (optionally) key
+      operationId: updateProviderSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider: { $ref: '#/components/schemas/ProviderId' }
+                baseUrl: { type: [string, 'null'] }
+                model: { type: [string, 'null'] }
+                visionOverride:
+                  type: [boolean, 'null']
+                  description: Per-model override of the vision capability; null restores the default.
+                apiKey:
+                  type: [string, 'null']
+                  description: Write-only; stored encrypted server-side, never returned
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProviderSettings' }
+
+  /provider/models:
+    get:
+      tags: [provider]
+      summary: Fetch the model list from the selected provider
+      operationId: listProviderModels
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { type: string }
+
+  /images:
+    post:
+      tags: [images]
+      summary: Upload a screenshot crop (PNG, JPEG, GIF or WEBP)
+      operationId: uploadImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Image' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+
+  /images/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [images]
+      summary: Stream a screenshot crop
+      operationId: getImage
+      responses:
+        '200':
+          description: The image bytes
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /servers:
+    get:
+      tags: [servers]
+      summary: Get the Calibre/Zotero connection details (without secrets)
+      operationId: getServerSettings
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServerSettings' }
+    put:
+      tags: [servers]
+      summary: Save Calibre/Zotero connection details
+      operationId: updateServerSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                calibreUrl: { type: [string, 'null'] }
+                calibreUser: { type: [string, 'null'] }
+                calibrePassword: { type: [string, 'null'], description: Write-only }
+                zoteroUserId: { type: [string, 'null'] }
+                zoteroApiKey: { type: [string, 'null'], description: Write-only }
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ServerSettings' }
+
+  /remote/{source}/browse:
+    parameters:
+      - $ref: '#/components/parameters/remoteSource'
+      - name: path
+        in: query
+        schema: { type: string }
+    get:
+      tags: [remote]
+      summary: Browse a remote catalog (OPDS subsection or Zotero collection)
+      operationId: browseRemote
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemotePage' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
+  /remote/{source}/search:
+    parameters:
+      - $ref: '#/components/parameters/remoteSource'
+      - name: q
+        in: query
+        required: true
+        schema: { type: string }
+    get:
+      tags: [remote]
+      summary: Search a remote catalog
+      operationId: searchRemote
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RemotePage' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
+  /remote/{source}/download:
+    parameters:
+      - $ref: '#/components/parameters/remoteSource'
+    post:
+      tags: [remote]
+      summary: Download a remote item into local storage and link provenance
+      operationId: downloadRemote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [remoteId, url]
+              properties:
+                remoteId: { type: string }
+                url: { type: string, format: uri }
+                title: { type: [string, 'null'] }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '502': { $ref: '#/components/responses/BadGateway' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: lecturo_session
+      description: |
+        Server session. State-changing requests must also present the
+        double-submit `X-CSRF-Token` header matching the `lecturo_csrf` cookie.
+
+  parameters:
+    limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    documentId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    conversationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    remoteSource:
+      name: source
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [calibre, zotero]
+
+  responses:
+    Unauthorized:
+      description: Not signed in
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflict (duplicate email, prompt cap reached)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    UnsupportedMediaType:
+      description: The payload is not a PDF or EPUB
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadGateway:
+      description: The upstream source failed; local data is unaffected
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [not_found, invalid_payload, not_a_book, provider_unconfigured]
+            message: { type: string }
+
+    User:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string, format: email }
+        createdAt: { type: string, format: date-time }
+
+    DocumentFormat:
+      type: string
+      enum: [pdf, epub]
+
+    Document:
+      type: object
+      required: [id, title, format, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+        locator: { type: [string, 'null'] }
+        byteSize: { type: [integer, 'null'] }
+        source:
+          type: [string, 'null']
+          description: calibre or zotero when downloaded from a remote library
+        remoteId: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    SavedPrompt:
+      type: object
+      required: [id, title, body]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+
+    Skill:
+      type: object
+      required: [id, skillId, name, enabled]
+      properties:
+        id: { type: string }
+        skillId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        author: { type: string }
+        version: { type: string }
+        scope: { type: string }
+        trigger: { type: string }
+        prompt: { type: string }
+        price: { type: string }
+        enabled: { type: boolean }
+
+    RemoteSkill:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        author: { type: string }
+        version: { type: string }
+        scope: { type: string }
+        trigger: { type: string }
+        prompt: { type: string }
+        price: { type: string }
+        paid: { type: boolean }
+
+    SkillRun:
+      type: object
+      required: [id, skillId, skillName, status, createdAt]
+      properties:
+        id: { type: string }
+        skillId: { type: string }
+        skillName: { type: string }
+        documentId: { type: string, nullable: true }
+        status: { type: string }
+        result: { type: string }
+        error: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    MessageRole:
+      type: string
+      enum: [user, assistant]
+
+    Message:
+      type: object
+      required: [id, conversationId, role, content, createdAt]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        role: { $ref: '#/components/schemas/MessageRole' }
+        content: { type: string }
+        isSummary: { type: boolean, default: false }
+        superseded: { type: boolean, default: false }
+        createdAt: { type: string, format: date-time }
+
+    Conversation:
+      type: object
+      required: [id, title, excerpt, provider, isDraft, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        documentId: { type: [string, 'null'] }
+        documentTitle:
+          type: [string, 'null']
+          description: The excerpt's trace, copied so it survives the document.
+        title: { type: string }
+        excerpt: { type: string }
+        locator: { type: [string, 'null'] }
+        promptId: { type: [string, 'null'] }
+        contextImageId:
+          type: [string, 'null']
+          description: Set when the draft was seeded by a screenshot crop.
+        provider: { $ref: '#/components/schemas/ProviderId' }
+        isDraft:
+          type: boolean
+          description: True until the first reply lands; a draft is a conversation without one.
+        sentAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ConversationWithMessages:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          required: [messages]
+          properties:
+            messages:
+              type: array
+              items: { $ref: '#/components/schemas/Message' }
+
+    ProviderId:
+      type: string
+      enum: [openai, kimi, openrouter, deepseek, anthropic, lecturo, copilot]
+
+    ProviderSettings:
+      type: object
+      required: [provider, hasKey, providers]
+      properties:
+        provider: { $ref: '#/components/schemas/ProviderId' }
+        baseUrl: { type: [string, 'null'] }
+        model: { type: [string, 'null'] }
+        hasKey: { type: boolean }
+        modelSupportsImages:
+          type: boolean
+          description: The resolved vision capability of the selected model.
+        destination:
+          type: string
+          description: Where the calls are routed — "Your key" or "Lecturo relay".
+        providers:
+          type: array
+          items:
+            type: object
+            required: [id, label, supportsImages, supported, configured]
+            properties:
+              id: { $ref: '#/components/schemas/ProviderId' }
+              label: { type: string }
+              supportsImages: { type: boolean }
+              supported: { type: boolean }
+              configured: { type: boolean }
+
+    Image:
+      type: object
+      required: [id, contentType, byteSize, createdAt]
+      properties:
+        id: { type: string }
+        contentType: { type: string }
+        byteSize: { type: integer }
+        createdAt: { type: string, format: date-time }
+
+    ServerSettings:
+      type: object
+      required: [calibreHasPassword, zoteroHasKey]
+      properties:
+        calibreUrl: { type: [string, 'null'] }
+        calibreUser: { type: [string, 'null'] }
+        calibreHasPassword: { type: boolean }
+        zoteroUserId: { type: [string, 'null'] }
+        zoteroHasKey: { type: boolean }
+
+    RemoteItem:
+      type: object
+      required: [remoteId, title, format]
+      properties:
+        remoteId: { type: string }
+        title: { type: string }
+        format: { $ref: '#/components/schemas/DocumentFormat' }
+        author: { type: [string, 'null'] }
+        url: { type: [string, 'null'] }
+        isCatalog: { type: boolean, default: false }
+        downloaded: { type: boolean, default: false }
+        documentId: { type: [string, 'null'] }
+
+    RemotePage:
+      type: object
+      required: [items]
+      properties:
+        title: { type: [string, 'null'] }
+        path: { type: [string, 'null'] }
+        searchable: { type: boolean }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RemoteItem' }

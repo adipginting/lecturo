@@ -1,0 +1,187 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.reader {
+  position: relative;
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.reader__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.reader__bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--l-outline-variant);
+}
+
+.reader__titles {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reader__title {
+  overflow: hidden;
+  font-size: var(--l-body-size);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader__sub {
+  font-size: var(--l-meta-size);
+  color: var(--l-on-surface-variant);
+}
+
+.reader__actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.reader__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.reading {
+  max-width: var(--l-reading-measure-expanded);
+  margin: 0 auto;
+  padding: 32px 24px;
+  font-family: var(--l-font-reading);
+  font-size: var(--l-reading-size);
+  line-height: var(--l-reading-lh);
+}
+
+.reading__heading {
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.reading__p {
+  margin: 0 0 24px;
+}
+
+.reader__footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 0 0 auto;
+  padding: 16px 24px;
+  border-top: 1px solid var(--l-outline-variant);
+}
+
+.reader__footer .btn:disabled {
+  color: var(--l-outline);
+  cursor: default;
+}
+
+.reader__contents {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.reader__contents .ms {
+  font-size: 20px;
+}
+
+/* ---- rendered documents ---- */
+.pdf-host {
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0 32px;
+}
+
+.epub-host {
+  width: 100%;
+  min-height: 70vh;
+}
+
+/* ---- screenshot crop ---- */
+.crop-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  background: var(--l-surface-high);
+  font-size: var(--l-body-sm-size);
+}
+
+.crop-bar .btn {
+  padding: 8px 16px;
+}
+
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: rgb(0 0 0 / 8%);
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.crop-rect {
+  position: absolute;
+  border: 2px solid var(--l-primary);
+  background: rgb(208 188 255 / 25%);
+  pointer-events: none;
+}
+
+/* ---- chat surface across breakpoints ---- */
+.reader__chat {
+  background: var(--l-surface);
+}
+
+/* medium: right overlay drawer */
+.reader[data-window='medium'] .reader__chat {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  border-left: 1px solid var(--l-outline-variant);
+}
+
+/* compact: bottom sheet */
+.reader[data-window='compact'] .reader__chat {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 74%;
+  border-radius: var(--l-radius-sheet) var(--l-radius-sheet) 0 0;
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 12%);
+}
+
+/* expanded: docked column */
+.reader[data-window='expanded'].reader--chat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--l-chat-panel);
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.reader[data-window='expanded'] .reader__chat {
+  border-left: 1px solid var(--l-outline-variant);
+}

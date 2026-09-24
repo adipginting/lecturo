@@ -1,0 +1,61 @@
+<div class="login">
+  <form class="login__card" (submit)="submit($event)">
+    <h1 class="login__brand">Lecturo</h1>
+    <p class="login__tag">Read · Save · Ask</p>
+
+    <div class="segmented">
+      <button
+        type="button"
+        class="segmented__item"
+        [class.segmented__item--active]="mode() === 'login'"
+        (click)="setMode('login')"
+      >
+        Sign in
+      </button>
+      <button
+        type="button"
+        class="segmented__item"
+        [class.segmented__item--active]="mode() === 'register'"
+        (click)="setMode('register')"
+      >
+        Create account
+      </button>
+    </div>
+
+    <label class="field">
+      <span>Email</span>
+      <input
+        class="text-field"
+        type="email"
+        autocomplete="email"
+        required
+        [value]="email()"
+        (input)="email.set($any($event.target).value)"
+      />
+    </label>
+
+    <label class="field">
+      <span>Password</span>
+      <input
+        class="text-field"
+        type="password"
+        [attr.autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'"
+        required
+        minlength="12"
+        [value]="password()"
+        (input)="password.set($any($event.target).value)"
+      />
+    </label>
+
+    @if (mode() === 'register') {
+      <p class="login__hint">At least 12 characters.</p>
+    }
+    @if (error()) {
+      <p class="login__error" role="alert">{{ error() }}</p>
+    }
+
+    <button class="btn btn--filled login__submit" type="submit" [disabled]="busy()">
+      {{ mode() === 'register' ? 'Create account' : 'Sign in' }}
+    </button>
+  </form>
+</div>

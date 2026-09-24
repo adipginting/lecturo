@@ -1,0 +1,188 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Lecturo.ViewModels"
+             xmlns:svc="using:Lecturo.Services"
+             xmlns:models="using:Lecturo.Domain"
+             xmlns:ctl="using:Lecturo.Controls"
+             x:Class="Lecturo.Views.ReaderView"
+             x:Name="Root"
+             x:DataType="vm:ReaderViewModel"
+             Focusable="True"
+             KeyDown="OnReaderKeyDown">
+
+    <DockPanel Background="{StaticResource SurfaceBrush}">
+
+        <!-- Top bar -->
+        <Border DockPanel.Dock="Top" Padding="16,10"
+                BorderBrush="{StaticResource OutlineVariantBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Classes="icon" ToolTip.Tip="Back to library"
+                        Command="{Binding BackCommand}">
+                    <Path Data="{StaticResource IconBack}" Width="20" Height="20" Stretch="Uniform"
+                          Fill="{StaticResource OnSurfaceBrush}" />
+                </Button>
+                <StackPanel Grid.Column="1" Margin="14,0" VerticalAlignment="Center" Spacing="1">
+                    <TextBlock Classes="readerTitle" Text="{Binding Title}" />
+                    <TextBlock Classes="metaSm" Text="{Binding ChapterTitle}" IsVisible="{Binding HasChapters}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
+                    <Button Classes="icon" ToolTip.Tip="Screenshot the page"
+                            IsVisible="{Binding !UsesWebView}"
+                            Click="OnScreenshot">
+                        <Path Data="{StaticResource IconCamera}" Width="18" Height="18" Stretch="Uniform"
+                              Fill="{StaticResource OnSurfaceVariantBrush}" />
+                    </Button>
+                    <Button Classes="icon" ToolTip.Tip="Skills and insights">
+                        <Button.Flyout>
+                            <Flyout Placement="BottomEdgeAlignedRight">
+                                <Border Width="320" Padding="12" DataContext="{Binding #Root.DataContext}">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock Classes="metaSm" Text="SKILLS" />
+                                        <ItemsControl ItemsSource="{Binding Skills}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:Skill">
+                                                    <Button Classes="text" HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            Content="{Binding Name}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ReaderViewModel)DataContext).RunSkillCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Classes="helper" Text="No skills installed — add them in Settings."
+                                                   IsVisible="{Binding !HasSkills}" />
+                                        <TextBlock Classes="helper" Text="{Binding SkillStatus}"
+                                                   IsVisible="{Binding !!SkillStatus.Length}" />
+                                        <Border Height="1" Background="{StaticResource OutlineVariantBrush}"
+                                                IsVisible="{Binding HasSkillRuns}" />
+                                        <TextBlock Classes="metaSm" Text="INSIGHTS"
+                                                   IsVisible="{Binding HasSkillRuns}" />
+                                        <ItemsControl ItemsSource="{Binding SkillRuns}"
+                                                      IsVisible="{Binding HasSkillRuns}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="models:SkillRun">
+                                                    <StackPanel Spacing="2" Margin="0,0,0,6">
+                                                        <TextBlock Classes="bodySm" Text="{Binding SkillName}" />
+                                                        <TextBlock Classes="metaSm">
+                                                            <Run Text="{Binding StatusLabel}" />
+                                                            <Run Text=" · " />
+                                                            <Run Text="{Binding WhenLabel}" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </Flyout>
+                        </Button.Flyout>
+                        <Path Data="{StaticResource IconSkills}" Width="18" Height="18" Stretch="Uniform"
+                              Fill="{StaticResource OnSurfaceVariantBrush}" />
+                    </Button>
+                    <!-- The document's chat: its newest draft, else the conversation it was last
+                         engaged with, else the chats list. Tinted while there is one in reach. -->
+                    <Button Classes="icon" ToolTip.Tip="Chat" Command="{Binding OpenChatCommand}">
+                        <Panel>
+                            <Path Data="{StaticResource IconChat}" Width="18" Height="18" Stretch="Uniform"
+                                  Fill="{StaticResource PrimaryBrush}"
+                                  IsVisible="{Binding HasChatInReach}" />
+                            <Path Data="{StaticResource IconChat}" Width="18" Height="18" Stretch="Uniform"
+                                  Fill="{StaticResource OnSurfaceVariantBrush}"
+                                  IsVisible="{Binding !HasChatInReach}" />
+                        </Panel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Bottom" Classes="helper" Margin="18,8"
+                   Text="{Binding StatusMessage}" IsVisible="{Binding !!StatusMessage.Length}" />
+
+        <!-- Chapter bar -->
+        <Border DockPanel.Dock="Bottom" Padding="18,12" IsVisible="{Binding ShowChapterBar}"
+                BorderBrush="{StaticResource OutlineVariantBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0" Classes="pill" Content="Previous"
+                        Command="{Binding PreviousCommand}" />
+                <ComboBox Grid.Column="1" Classes="chapterPicker" Width="320"
+                          HorizontalAlignment="Center"
+                          ItemsSource="{Binding Chapters}"
+                          SelectedItem="{Binding SelectedChapter}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="svc:ReaderChapter">
+                            <TextBlock Text="{Binding Title}" MaxLines="1"
+                                       TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Button Grid.Column="2" Classes="pill" Content="Next"
+                        Command="{Binding NextCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- Reading surface: EPUB renders natively (scroll + selection are
+             reliable); PDF pages are rendered and stacked in the surface below. -->
+        <Grid x:Name="ReadingGrid">
+            <ScrollViewer x:Name="ReadingScroll" IsVisible="{Binding ShowPagedSurface}" Background="{StaticResource WhiteBrush}"
+                          ScrollChanged="OnReadingScroll">
+                <ctl:MarkdownPresenter x:Name="EpubContent"
+                                       Markdown="{Binding PageMarkdown}"
+                                       FontFamily="{StaticResource ReadingFont}"
+                                       FontSize="19"
+                                       MaxWidth="680"
+                                       HorizontalAlignment="Center"
+                                       Margin="48,44,48,88">
+                    <ctl:MarkdownPresenter.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Ask AI" Click="OnAskSelection" />
+                        </ContextMenu>
+                    </ctl:MarkdownPresenter.ContextMenu>
+                </ctl:MarkdownPresenter>
+            </ScrollViewer>
+            <!-- PDF: every page rendered, stacked for continuous scrolling -->
+            <ScrollViewer x:Name="PdfScroll" IsVisible="{Binding IsPdfPages}" Background="{StaticResource WhiteBrush}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding PdfPages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ReaderPage">
+                            <ctl:PdfPageView Image="{Binding Image}" Words="{Binding Words}"
+                                             PagePixelWidth="{Binding PixelWidth}" PagePixelHeight="{Binding PixelHeight}"
+                                             Margin="24,10,24,10" HorizontalAlignment="Stretch" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <NativeWebView x:Name="Web" IsVisible="{Binding UsesWebView}"
+                           Background="{StaticResource WhiteBrush}" />
+
+            <!-- Floating selection pill: Copy · Select all · Ask AI -->
+            <Border x:Name="SelectionPill" IsVisible="False"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Background="{StaticResource SurfaceContainerHighBrush}"
+                    CornerRadius="22" Padding="4" BoxShadow="0 2 8 0 #33000000">
+                <StackPanel Orientation="Horizontal" Spacing="2">
+                    <Button Classes="text" Content="Copy" Click="OnPillCopy" />
+                    <Button Classes="text" Content="Select all" Click="OnPillSelectAll" />
+                    <Button Classes="text" Content="Ask AI" Click="OnAskSelection" />
+                </StackPanel>
+            </Border>
+
+            <!-- Screenshot crop mode (S22) -->
+            <Grid x:Name="CropLayer" IsVisible="False" Background="#33000000"
+                  PointerPressed="OnCropPressed" PointerMoved="OnCropMoved" PointerReleased="OnCropReleased">
+                <TextBlock Classes="helper" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Top"
+                           Margin="0,18,0,0" Text="Drag a rectangle over the page, then Capture." />
+                <Border x:Name="CropRect" IsVisible="False" Background="#22000000"
+                        BorderBrush="{StaticResource PrimaryBrush}" BorderThickness="2"
+                        HorizontalAlignment="Left" VerticalAlignment="Top" />
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center"
+                            VerticalAlignment="Bottom" Margin="0,0,0,26">
+                    <Button Classes="pill" Content="Capture" Click="OnCropCapture" />
+                    <Button Classes="pill" Content="Cancel" Click="OnCropCancel" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+
+</UserControl>

@@ -1,0 +1,153 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Lecturo.ViewModels"
+             xmlns:models="using:Lecturo.Domain"
+             x:Class="Lecturo.Views.ChatsView"
+             x:DataType="vm:ChatsViewModel">
+
+    <Grid>
+        <DockPanel Margin="40,32,32,24">
+
+            <TextBlock DockPanel.Dock="Top" Classes="screenTitle" Text="Chats" />
+            <TextBlock DockPanel.Dock="Top" Classes="helper" Margin="0,10,0,0"
+                       Text="Drafts wait to be asked about; conversations keep the excerpt they were started from." />
+
+            <!-- Tabs: Drafts | Conversations -->
+            <Grid DockPanel.Dock="Top" RowDefinitions="Auto,Auto,Auto" Margin="0,16,0,0">
+                <Grid Grid.Row="0" ColumnDefinitions="*,*">
+                    <Button Grid.Column="0" Classes="tab" Content="Drafts"
+                            Classes.active="{Binding IsDraftsTab}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Drafts" />
+                    <Button Grid.Column="1" Classes="tab" Content="Conversations"
+                            Classes.active="{Binding IsConversationsTab}"
+                            Command="{Binding SelectTabCommand}" CommandParameter="Conversations" />
+                </Grid>
+                <Grid Grid.Row="1" ColumnDefinitions="*,*" Height="3">
+                    <Border Grid.Column="0" Width="100" HorizontalAlignment="Center"
+                            Background="{StaticResource PrimaryBrush}" IsVisible="{Binding IsDraftsTab}" />
+                    <Border Grid.Column="1" Width="100" HorizontalAlignment="Center"
+                            Background="{StaticResource PrimaryBrush}" IsVisible="{Binding IsConversationsTab}" />
+                </Grid>
+                <Border Grid.Row="2" Height="1" Background="{StaticResource OutlineVariantBrush}" />
+            </Grid>
+
+            <!-- Drafts -->
+            <StackPanel DockPanel.Dock="Top" Margin="0,64,0,0" Spacing="10" HorizontalAlignment="Center"
+                        IsVisible="{Binding !HasDrafts}">
+                <Path Data="{StaticResource IconChat}" Width="40" Height="40" Stretch="Uniform"
+                      Fill="{StaticResource OutlineVariantBrush}" HorizontalAlignment="Center" />
+                <TextBlock Classes="sectionTitle" Text="No drafts yet" HorizontalAlignment="Center" />
+                <TextBlock Classes="helper" TextAlignment="Center" MaxWidth="380"
+                           Text="Select text while reading and choose Ask AI — it waits here until you send it." />
+            </StackPanel>
+
+            <ScrollViewer Margin="0,18,0,0" IsVisible="{Binding IsDraftsTab}" HorizontalScrollBarVisibility="Disabled">
+                <Grid ColumnDefinitions="*">
+                                        <ItemsControl Grid.Column="0" ItemsSource="{Binding Drafts}" IsVisible="{Binding HasDrafts}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ConversationItem">
+                                <Border Classes="card" Margin="0,0,0,12" Padding="20">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Button Grid.Column="0" Classes="plain" HorizontalAlignment="Stretch"
+                                                HorizontalContentAlignment="Left"
+                                                Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).OpenDraftCommand}"
+                                                CommandParameter="{Binding}">
+                                            <StackPanel Spacing="8" Margin="0,2">
+                                                <Border Background="{StaticResource PrimaryContainerBrush}" CornerRadius="8"
+                                                        Padding="10,3" HorizontalAlignment="Left">
+                                                    <TextBlock Text="Draft" FontSize="12" FontWeight="Medium"
+                                                               Foreground="{StaticResource OnPrimaryContainerBrush}" />
+                                                </Border>
+                                                <TextBlock Classes="excerpt" FontSize="12" Text="{Binding Excerpt}"
+                                                           MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="metaSm" Text="{Binding SourceLine}" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="Discard draft"
+                                                VerticalAlignment="Top"
+                                                Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).DeleteDraftCommand}"
+                                                CommandParameter="{Binding}">
+                                            <Path Data="{StaticResource IconTrash}" Width="20" Height="20"
+                                                  Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+
+            <!-- Conversations -->
+            <StackPanel DockPanel.Dock="Top" Margin="0,64,0,0" Spacing="10" HorizontalAlignment="Center"
+                        IsVisible="{Binding !HasConversations}">
+                <Path Data="{StaticResource IconChat}" Width="40" Height="40" Stretch="Uniform"
+                      Fill="{StaticResource OutlineVariantBrush}" HorizontalAlignment="Center" />
+                <TextBlock Classes="sectionTitle" Text="No conversations yet" HorizontalAlignment="Center" />
+                <TextBlock Classes="helper" TextAlignment="Center" MaxWidth="380"
+                           Text="Open a draft and ask a question — the conversation shows up here." />
+            </StackPanel>
+
+            <ScrollViewer Margin="0,18,0,0" IsVisible="{Binding IsConversationsTab}" HorizontalScrollBarVisibility="Disabled">
+                <Grid ColumnDefinitions="*">
+                    <ItemsControl Grid.Column="0" ItemsSource="{Binding Conversations}" IsVisible="{Binding HasConversations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ConversationItem">
+                                <Border Classes="card" Margin="0,0,0,12" Padding="20">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0" Spacing="8" Margin="0,0,12,0">
+                                            <Grid>
+                                                <TextBlock Classes="cardTitle" Text="{Binding Title}"
+                                                           IsVisible="{Binding !IsRenaming}"
+                                                           MaxLines="1" TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                                            IsVisible="{Binding IsRenaming}">
+                                                    <TextBox Text="{Binding RenameText}" Width="260" />
+                                                    <Button Classes="text" Content="Save"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).CommitRenameCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                    <Button Classes="text" Content="Cancel"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).CancelRenameCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+                                            </Grid>
+                                            <TextBlock Classes="excerpt" FontSize="12" Text="{Binding Excerpt}"
+                                                       IsVisible="{Binding HasExcerpt}"
+                                                       MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="metaSm" Text="{Binding SourceLine}" />
+                                            <TextBlock Classes="metaSm" Text="{Binding ProviderLine}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                                                    VerticalAlignment="Top" Spacing="2">
+                                            <Button Classes="icon" ToolTip.Tip="Rename"
+                                                    IsVisible="{Binding !IsRenaming}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).BeginRenameCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <Path Data="{StaticResource IconEdit}" Width="20" Height="20"
+                                                      Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                            </Button>
+                                            <Button Classes="icon" ToolTip.Tip="Delete"
+                                                    Command="{Binding $parent[ItemsControl].((vm:ChatsViewModel)DataContext).DeleteCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <Path Data="{StaticResource IconTrash}" Width="20" Height="20"
+                                                      Stretch="Uniform" Fill="{StaticResource OnSurfaceVariantBrush}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+
+        <Button Classes="fab" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                Margin="0,0,40,40" ToolTip.Tip="Start a new chat from a draft"
+                Command="{Binding NewChatCommand}">
+            <Path Data="{StaticResource IconAdd}" Width="24" Height="24" Stretch="Uniform"
+                  Fill="{StaticResource OnPrimaryContainerBrush}" />
+        </Button>
+    </Grid>
+
+</UserControl>

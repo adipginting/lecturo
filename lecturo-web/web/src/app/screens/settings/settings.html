@@ -1,0 +1,240 @@
+<section class="screen">
+  <div class="screen__bar">
+    <h1 class="screen__title">Settings</h1>
+    <div class="screen__actions">
+      <button class="btn" (click)="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="banner-error" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="screen__sub">{{ notice() }}</p>
+  }
+
+  <div class="radio-row" style="cursor: pointer" (click)="toggleMath()">
+    <span>Render mathematics (KaTeX)</span>
+    <span class="ms" style="margin-left: auto; color: var(--l-primary)">
+      {{ mathEnabled() ? 'toggle_on' : 'toggle_off' }}
+    </span>
+  </div>
+
+  <h2 class="section-title">Language</h2>
+  <div class="segmented" style="max-width: 260px">
+    @for (locale of locales; track locale) {
+      <button
+        type="button"
+        class="segmented__item"
+        [class.segmented__item--active]="i18n.locale() === locale"
+        (click)="setLocale(locale)"
+      >
+        {{ locale === 'en' ? 'English' : 'Bahasa Indonesia' }}
+      </button>
+    }
+  </div>
+
+  <h2 class="section-title">Chat provider</h2>
+  <div class="stack">
+    @for (provider of providers(); track provider.id) {
+      <button
+        class="radio-row"
+        style="border: 0; background: none; cursor: pointer; text-align: left"
+        [disabled]="!provider.supported"
+        (click)="selectProvider(provider.id)"
+      >
+        <span class="radio-dot" [class.radio-dot--on]="providerId() === provider.id"></span>
+        <span>{{ provider.label }}</span>
+        @if (provider.configured) {
+          <span class="ms" style="font-size: 16px; color: var(--l-primary)">key</span>
+        }
+        @if (!provider.supported) {
+          <span class="card__meta">not yet supported</span>
+        }
+      </button>
+    }
+  </div>
+
+  <h2 class="section-title">Connection</h2>
+  <label class="field">
+    <span>Base URL (optional)</span>
+    <input
+      class="text-field"
+      [value]="baseUrl()"
+      (input)="baseUrl.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span
+      >API key
+      @if (hasKey()) {
+        (a key is stored)
+      }
+    </span>
+    <input
+      class="text-field"
+      type="password"
+      placeholder="Leave blank to keep the stored key"
+      [value]="apiKey()"
+      (input)="apiKey.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span>Model (optional)</span>
+    <input class="text-field" [value]="model()" (input)="model.set($any($event.target).value)" />
+  </label>
+
+  <div class="radio-row" style="cursor: pointer" (click)="toggleVision()">
+    <span>Current model supports images</span>
+    <span class="ms" style="margin-left: auto; color: var(--l-primary)">
+      {{ modelSupportsImages() ? 'toggle_on' : 'toggle_off' }}
+    </span>
+  </div>
+
+  <div class="chip-row">
+    <button class="btn" [disabled]="busy()" (click)="fetchModels()">Fetch model list</button>
+    @for (name of models(); track name) {
+      <button class="chip" (click)="chooseModel(name)">{{ name }}</button>
+    }
+  </div>
+
+  <button class="btn btn--filled" [disabled]="busy()" (click)="saveProvider()">
+    Save provider
+  </button>
+
+  <h2 class="section-title">Servers</h2>
+  <label class="field">
+    <span>Calibre Content Server URL</span>
+    <input
+      class="text-field"
+      [value]="calibreUrl()"
+      (input)="calibreUrl.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span>Calibre username</span>
+    <input
+      class="text-field"
+      [value]="calibreUser()"
+      (input)="calibreUser.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span
+      >Calibre password
+      @if (servers().calibreHasPassword) {
+        (stored)
+      }
+    </span>
+    <input
+      class="text-field"
+      type="password"
+      [value]="calibrePassword()"
+      (input)="calibrePassword.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span>Zotero user id</span>
+    <input
+      class="text-field"
+      [value]="zoteroUserId()"
+      (input)="zoteroUserId.set($any($event.target).value)"
+    />
+  </label>
+  <label class="field">
+    <span
+      >Zotero API key
+      @if (servers().zoteroHasKey) {
+        (stored)
+      }
+    </span>
+    <input
+      class="text-field"
+      type="password"
+      [value]="zoteroApiKey()"
+      (input)="zoteroApiKey.set($any($event.target).value)"
+    />
+  </label>
+  <button class="btn btn--filled" [disabled]="busy()" (click)="saveServers()">Save servers</button>
+
+  <h2 class="section-title">Saved prompts</h2>
+  <p class="screen__sub">Up to twelve; they appear as chips above the composer.</p>
+  <div class="stack" style="margin-top: 12px">
+    @for (prompt of prompts(); track prompt.id) {
+      <article class="card">
+        <span class="card__title">{{ prompt.title }}</span>
+        <span class="card__meta">{{ prompt.body }}</span>
+        <button class="icon-btn" aria-label="Delete prompt" (click)="deletePrompt(prompt)">
+          <span class="ms">delete</span>
+        </button>
+      </article>
+    }
+  </div>
+
+  <div class="two-col" style="margin-top: 16px">
+    <label class="field">
+      <span>Prompt title</span>
+      <input
+        class="text-field"
+        [value]="newPromptTitle()"
+        (input)="newPromptTitle.set($any($event.target).value)"
+      />
+    </label>
+    <label class="field">
+      <span>Prompt body</span>
+      <input
+        class="text-field"
+        [value]="newPromptBody()"
+        (input)="newPromptBody.set($any($event.target).value)"
+      />
+    </label>
+  </div>
+  <button class="btn btn--tonal" (click)="addPrompt()">Add prompt</button>
+
+  <h2 class="section-title">Skills</h2>
+  <p class="screen__sub">Install a skill from a marketplace, then run it against a document.</p>
+  <label class="field" style="margin-top: 12px">
+    <span>Marketplace URL</span>
+    <input
+      class="text-field"
+      [value]="marketplaceUrl()"
+      (input)="marketplaceUrl.set($any($event.target).value)"
+    />
+  </label>
+  <button class="btn btn--tonal" (click)="browseSkills()">Browse</button>
+  @if (skillStatus()) {
+    <p class="screen__sub">{{ skillStatus() }}</p>
+  }
+
+  @if (skillsCatalog().length) {
+    <div class="stack" style="margin-top: 12px">
+      @for (skill of skillsCatalog(); track skill.id) {
+        <article class="card">
+          <span class="card__title">{{ skill.name }}</span>
+          <span class="card__meta">{{ skill.description }}</span>
+          <button class="btn btn--text" [disabled]="skill.paid" (click)="installSkill(skill)">
+            {{ skill.paid ? 'Paid' : 'Install' }}
+          </button>
+        </article>
+      }
+    </div>
+  }
+
+  @if (skills().length) {
+    <h3 class="section-title" style="margin-top: 16px">Installed</h3>
+    <div class="stack">
+      @for (skill of skills(); track skill.id) {
+        <article class="card">
+          <span class="card__title">{{ skill.name }}</span>
+          <span class="card__meta">{{ skill.enabled ? 'Enabled' : 'Disabled' }}</span>
+          <button class="btn btn--text" (click)="toggleSkill(skill)">
+            {{ skill.enabled ? 'Disable' : 'Enable' }}
+          </button>
+          <button class="icon-btn" aria-label="Remove skill" (click)="uninstallSkill(skill)">
+            <span class="ms">delete</span>
+          </button>
+        </article>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,84 @@
+// Generated from tokens.json (source: Penpot `Lecturo Web` boards).
+// Do not hand-edit values here; change the Penpot boards and regenerate.
+
+:root {
+  // color
+  --l-surface: #fffbfe;
+  --l-surface-low: #f7f2fa;
+  --l-surface-container: #f3edf7;
+  --l-surface-high: #ece6f0;
+  --l-on-surface: #1c1b1f;
+  --l-on-surface-variant: #49454f;
+  --l-primary: #6650a4;
+  --l-primary-container: #eaddff;
+  --l-on-primary-container: #21005d;
+  --l-secondary-container: #e8def8;
+  --l-on-secondary-container: #1d192b;
+  --l-outline: #79747e;
+  --l-outline-variant: #cac4d0;
+  --l-selection: #d0bcff;
+  --l-white: #ffffff;
+
+  // fonts
+  --l-font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --l-font-reading: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+
+  // type
+  --l-display-size: 24px;
+  --l-display-weight: 600;
+  --l-display-lh: 1.25;
+  --l-headline-size: 22px;
+  --l-headline-weight: 600;
+  --l-headline-lh: 1.3;
+  --l-title-size: 20px;
+  --l-title-weight: 500;
+  --l-title-lh: 1.3;
+  --l-subtitle-size: 16px;
+  --l-subtitle-weight: 600;
+  --l-subtitle-lh: 1.4;
+  --l-body-size: 14px;
+  --l-body-weight: 400;
+  --l-body-lh: 1.5;
+  --l-body-sm-size: 13px;
+  --l-body-sm-weight: 400;
+  --l-body-sm-lh: 1.45;
+  --l-label-size: 12px;
+  --l-label-weight: 500;
+  --l-label-lh: 1.3;
+  --l-meta-size: 11px;
+  --l-meta-weight: 400;
+  --l-meta-lh: 1.3;
+  --l-reading-size: 19px;
+  --l-reading-weight: 400;
+  --l-reading-lh: 1.6;
+
+  // spacing
+  --l-space-1: 4px;
+  --l-space-2: 8px;
+  --l-space-3: 12px;
+  --l-space-4: 16px;
+  --l-space-6: 24px;
+  --l-space-8: 32px;
+  --l-space-12: 48px;
+  --l-space-16: 64px;
+
+  // radius
+  --l-radius-field: 4px;
+  --l-radius-small: 8px;
+  --l-radius-card: 16px;
+  --l-radius-button: 22px;
+  --l-radius-sheet: 28px;
+  --l-radius-pill: 999px;
+
+  // layout
+  --l-nav-rail-medium: 80px;
+  --l-nav-rail-expanded: 248px;
+  --l-chat-panel: 400px;
+  --l-reading-measure-compact: 358px;
+  --l-reading-measure-medium: 680px;
+  --l-reading-measure-expanded: 700px;
+}
+
+// Material 3 window size classes (used by the shell).
+$l-breakpoint-medium: 600px;
+$l-breakpoint-expanded: 1024px;

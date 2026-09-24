@@ -1,0 +1,125 @@
+<section
+  class="reader"
+  [attr.data-window]="layout.windowClass()"
+  [class.reader--chat]="chatOpen() && layout.isExpanded()"
+>
+  <div class="reader__main">
+    <header class="reader__bar">
+      <button class="icon-btn" aria-label="Back" routerLink="/library">
+        <span class="ms">arrow_back</span>
+      </button>
+      <div class="reader__titles">
+        <span class="reader__title">
+          {{ document()?.title ?? 'marcus-aurelius_meditations_george-long' }}
+        </span>
+        <span class="reader__sub">{{ chapter() }}</span>
+      </div>
+      <div class="reader__actions">
+        <button class="icon-btn" aria-label="Screenshot a passage" (click)="startCrop()">
+          <span class="ms">photo_camera</span>
+        </button>
+        <button
+          class="icon-btn"
+          aria-label="Ask AI"
+          [disabled]="!selectionText()"
+          (click)="askAi()"
+        >
+          <span class="ms">chat_bubble</span>
+        </button>
+        @if (layout.isCompact()) {
+          <button class="icon-btn" aria-label="Contents"><span class="ms">list</span></button>
+        }
+      </div>
+    </header>
+
+    @if (error()) {
+      <p class="banner-error" role="alert">{{ error() }}</p>
+    }
+    @if (savedNotice()) {
+      <p class="screen__sub">{{ savedNotice() }}</p>
+    }
+    @if (cropNotice()) {
+      <p class="banner-error">{{ cropNotice() }}</p>
+    }
+
+    @if (cropping()) {
+      <div class="crop-bar">
+        <span>Drag a rectangle, then capture.</span>
+        <button class="btn btn--filled" [disabled]="saving()" (click)="confirmCrop()">
+          Capture
+        </button>
+        <button class="btn" (click)="cancelCrop()">Cancel</button>
+      </div>
+    }
+
+    @if (selectionText()) {
+      <div class="selection-action">
+        <button class="btn btn--filled" [disabled]="saving()" (click)="askAi()">Ask AI</button>
+        <button class="btn" style="margin-left: 8px" (click)="dismissSelection()">Dismiss</button>
+      </div>
+    }
+
+    <div class="reader__scroll" #readerScroll (mouseup)="onSelectionEnd()" (scroll)="onPdfScroll()">
+      @if (status()) {
+        <p class="reader__status">{{ status() }}</p>
+      }
+
+      @if (hasDocument()) {
+        @if (isPdf()) {
+          <div class="pdf-host" #pdfHost>
+            @if (cropping()) {
+              <div
+                class="crop-overlay"
+                (pointerdown)="onCropDown($event)"
+                (pointermove)="onCropMove($event)"
+                (pointerup)="onCropUp()"
+                (pointercancel)="onCropUp()"
+              >
+                @if (cropRect(); as rect) {
+                  <div
+                    class="crop-rect"
+                    [style.left.px]="rect.x"
+                    [style.top.px]="rect.y"
+                    [style.width.px]="rect.w"
+                    [style.height.px]="rect.h"
+                  ></div>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <div #epubHost class="epub-host"></div>
+        }
+      } @else {
+        <article class="reading">
+          <h2 class="reading__heading">{{ chapter() }}</h2>
+          @for (paragraph of sampleParagraphs; track $index) {
+            <p class="reading__p">{{ paragraph }}</p>
+          }
+        </article>
+      }
+    </div>
+
+    <footer class="reader__footer">
+      <button class="btn btn--tonal" (click)="step(-1)">Previous</button>
+      <button class="btn btn--tonal reader__contents" (click)="openChat('draft')">
+        {{ chapter() }}<span class="ms">expand_more</span>
+      </button>
+      <button class="btn btn--tonal" (click)="step(1)">Next</button>
+    </footer>
+  </div>
+
+  @if (chatOpen()) {
+    <app-chat-panel
+      class="reader__chat"
+      [mode]="chatMode()"
+      [conversationId]="conversationId()"
+      [documentId]="document()?.id ?? null"
+      [excerpt]="excerpt()"
+      [imageId]="contextImageId()"
+      [reloadToken]="chatReload()"
+      (close)="chatOpen.set(false)"
+      (started)="conversationId.set($event)"
+    />
+  }
+</section>
