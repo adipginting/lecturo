@@ -19,7 +19,7 @@ public sealed record RemoteSkill(
 
 /// <summary>An installed skill (S39).</summary>
 public sealed record Skill(
-    long Id,
+    string Id,
     string SkillId,
     string Name,
     string Description,
@@ -36,8 +36,8 @@ public sealed record Skill(
 
 /// <summary>One background run of a skill against a document (S41/S42).</summary>
 public sealed record SkillRun(
-    long Id,
-    long? DocumentId,
+    string Id,
+    string? DocumentId,
     string SkillId,
     string SkillName,
     RunStatus Status,

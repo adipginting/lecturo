@@ -6,10 +6,10 @@ sealed interface ReaderChatTarget {
     data object Chats : ReaderChatTarget
 
     /** The document's newest draft: a conversation not yet sent. */
-    data class Draft(val id: Long) : ReaderChatTarget
+    data class Draft(val id: String) : ReaderChatTarget
 
     /** An existing conversation. */
-    data class Conversation(val id: Long) : ReaderChatTarget
+    data class Conversation(val id: String) : ReaderChatTarget
 }
 
 /**
@@ -18,7 +18,7 @@ sealed interface ReaderChatTarget {
  * the chats surface. Ids are scoped to the document by the caller, so a draft
  * from another book cannot reach this rule.
  */
-fun readerChatTarget(draftId: Long?, activeConversationId: Long?): ReaderChatTarget = when {
+fun readerChatTarget(draftId: String?, activeConversationId: String?): ReaderChatTarget = when {
     activeConversationId != null -> ReaderChatTarget.Conversation(activeConversationId)
     draftId != null -> ReaderChatTarget.Draft(draftId)
     else -> ReaderChatTarget.Chats

@@ -20,11 +20,11 @@ public sealed class PromptRepository : IPromptRepository
         using var reader = cmd.ExecuteReader();
         var result = new List<Prompt>();
         while (reader.Read())
-            result.Add(new Prompt(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)));
+            result.Add(new Prompt(reader.GetString(0), reader.GetString(1), reader.GetString(2)));
         return result;
     }
 
-    public Prompt? Get(long id)
+    public Prompt? Get(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -32,21 +32,24 @@ public sealed class PromptRepository : IPromptRepository
         cmd.Parameters.AddWithValue("$id", id);
         using var reader = cmd.ExecuteReader();
         return reader.Read()
-            ? new Prompt(reader.GetInt64(0), reader.GetString(1), reader.GetString(2))
+            ? new Prompt(reader.GetString(0), reader.GetString(1), reader.GetString(2))
             : null;
     }
 
-    public long Add(string name, string content)
+    public string Add(string name, string content)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "INSERT INTO prompts(name, content) VALUES ($name, $content); SELECT last_insert_rowid();";
+        cmd.CommandText = "INSERT INTO prompts(id, name, content) VALUES ($id, $name, $content);";
+        var id = UuidV7.New();
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$name", name);
         cmd.Parameters.AddWithValue("$content", content);
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 
-    public void Update(long id, string name, string content)
+    public void Update(string id, string name, string content)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -57,7 +60,7 @@ public sealed class PromptRepository : IPromptRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void Delete(long id)
+    public void Delete(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();

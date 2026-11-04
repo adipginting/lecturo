@@ -255,7 +255,7 @@ public partial class ReaderViewModel : ViewModelBase
             RenderChapter(index);
     }
 
-    private void LoadSkills(long? documentId)
+    private void LoadSkills(string? documentId)
     {
         Skills.Clear();
         foreach (var skill in _skills.ListInstalled().Where(s => s.Enabled))
@@ -348,7 +348,7 @@ public partial class ReaderViewModel : ViewModelBase
                 || _conversations.ActiveForDocument(document.Id) is not null);
     }
 
-    private void OpenDraft(long id)
+    private void OpenDraft(string id)
     {
         if (_conversations.Get(id) is { } draft)
         {

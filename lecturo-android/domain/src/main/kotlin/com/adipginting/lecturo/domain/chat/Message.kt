@@ -2,7 +2,7 @@ package com.adipginting.lecturo.domain.chat
 
 /** One turn in a conversation, from the user or the model. */
 data class Message(
-    val id: Long = 0,
+    val id: String = "",
     val role: Role,
     val text: String,
     val imagePath: String? = null,

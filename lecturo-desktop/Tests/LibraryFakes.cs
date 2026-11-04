@@ -6,27 +6,27 @@ namespace Lecturo.Tests;
 /// <summary>An in-memory document store, keyed by id.</summary>
 internal sealed class FakeDocumentRepository : IDocumentRepository
 {
-    private readonly Dictionary<long, Document> _documents = new();
+    private readonly Dictionary<string, Document> _documents = new();
     private long _next = 1;
 
     public List<Document> List() => _documents.Values.OrderByDescending(d => d.UpdatedAt).ToList();
 
-    public Document? Get(long id) => _documents.GetValueOrDefault(id);
+    public Document? Get(string id) => _documents.GetValueOrDefault(id);
 
-    public long Add(string title, string fileName, DocumentFormat format)
+    public string Add(string title, string fileName, DocumentFormat format)
     {
-        var id = _next++;
+        var id = (_next++).ToString();
         _documents[id] = new Document(id, title, fileName, format, null, DateTime.UtcNow);
         return id;
     }
 
-    public void UpdateLocator(long id, string locator)
+    public void UpdateLocator(string id, string locator)
     {
         if (_documents.TryGetValue(id, out var d))
             _documents[id] = d with { LastLocator = locator, UpdatedAt = DateTime.UtcNow };
     }
 
-    public void Delete(long id) => _documents.Remove(id);
+    public void Delete(string id) => _documents.Remove(id);
 }
 
 /// <summary>A filesystem in a dictionary: no temp dirs, no cleanup.</summary>

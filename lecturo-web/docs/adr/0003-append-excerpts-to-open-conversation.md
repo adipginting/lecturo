@@ -29,8 +29,8 @@ carry their own ADRs).
 - One conversation per reading session per document; the seed excerpt stays
   frozen and later excerpts join as turns.
 - A screenshot rides the turn being sent: the model call attaches the appended
-  image to the latest user message, and `messages.image_id` (migration 0004)
-  keeps it in the history. No new schema was needed.
+  image to the latest user message, and `messages.image_id` keeps it in the
+  history. No new schema was needed.
 - The client must resolve "the open conversation for this document" before
   deciding whether a selection makes a draft or appends.
 - `GET /conversations?documentId=` already answers that lookup.

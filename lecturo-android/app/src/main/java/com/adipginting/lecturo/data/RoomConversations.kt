@@ -9,6 +9,7 @@ import com.adipginting.lecturo.domain.chat.Excerpt
 import com.adipginting.lecturo.domain.chat.Message
 import com.adipginting.lecturo.domain.shared.DocumentId
 import com.adipginting.lecturo.domain.shared.ProviderId
+import com.adipginting.lecturo.domain.shared.uuidV7
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -33,15 +34,15 @@ class RoomConversations(
     override fun observeForDocument(docId: DocumentId): Flow<List<Conversation>> =
         conversations.observeForDoc(docId.value).map { rows -> rows.map { it.toDomain() } }
 
-    override fun observe(id: Long): Flow<Conversation?> =
+    override fun observe(id: String): Flow<Conversation?> =
         conversations.observe(id).map { it?.toDomain() }
 
-    override suspend fun get(id: Long): Conversation? = conversations.get(id)?.toDomain()
+    override suspend fun get(id: String): Conversation? = conversations.get(id)?.toDomain()
 
-    override fun observeMessages(id: Long): Flow<List<Message>> =
+    override fun observeMessages(id: String): Flow<List<Message>> =
         messages.observeFor(id).map { rows -> rows.map { it.toDomain() } }
 
-    override suspend fun activeMessages(id: Long): List<Message> =
+    override suspend fun activeMessages(id: String): List<Message> =
         messages.getActiveFor(id).map { it.toDomain() }
 
     override suspend fun createDraft(
@@ -50,43 +51,53 @@ class RoomConversations(
         docId: DocumentId?,
         docTitle: String?,
         locator: String?,
-    ): Long = conversations.insert(
-        ConversationEntity(
-            title = ConversationTitle.UNTITLED,
-            providerId = provider.value,
-            contextText = excerpt.text?.takeIf { it.isNotBlank() },
-            contextImagePath = excerpt.imagePath?.takeIf { it.isNotBlank() },
-            docId = docId?.value?.takeIf { it.isNotBlank() },
-            docTitle = docTitle?.takeIf { it.isNotBlank() },
-            docLocator = locator?.takeIf { it.isNotBlank() },
-            sentAt = null,
-        ),
-    )
+    ): String {
+        val id = uuidV7()
+        conversations.insert(
+            ConversationEntity(
+                id = id,
+                title = ConversationTitle.UNTITLED,
+                providerId = provider.value,
+                contextText = excerpt.text?.takeIf { it.isNotBlank() },
+                contextImagePath = excerpt.imagePath?.takeIf { it.isNotBlank() },
+                docId = docId?.value?.takeIf { it.isNotBlank() },
+                docTitle = docTitle?.takeIf { it.isNotBlank() },
+                docLocator = locator?.takeIf { it.isNotBlank() },
+                sentAt = null,
+            ),
+        )
+        return id
+    }
 
     override suspend fun create(
         provider: ProviderId,
         excerpt: Excerpt,
-        promptId: Long?,
+        promptId: String?,
         customPrompt: String?,
         docId: DocumentId?,
         docTitle: String?,
         locator: String?,
-    ): Long = conversations.insert(
-        ConversationEntity(
-            title = ConversationTitle.UNTITLED,
-            providerId = provider.value,
-            promptId = promptId,
-            customPrompt = customPrompt?.takeIf { it.isNotBlank() },
-            contextText = excerpt.text?.takeIf { it.isNotBlank() },
-            contextImagePath = excerpt.imagePath?.takeIf { it.isNotBlank() },
-            docId = docId?.value?.takeIf { it.isNotBlank() },
-            docTitle = docTitle?.takeIf { it.isNotBlank() },
-            docLocator = locator?.takeIf { it.isNotBlank() },
-            sentAt = System.currentTimeMillis(),
-        ),
-    )
+    ): String {
+        val id = uuidV7()
+        conversations.insert(
+            ConversationEntity(
+                id = id,
+                title = ConversationTitle.UNTITLED,
+                providerId = provider.value,
+                promptId = promptId,
+                customPrompt = customPrompt?.takeIf { it.isNotBlank() },
+                contextText = excerpt.text?.takeIf { it.isNotBlank() },
+                contextImagePath = excerpt.imagePath?.takeIf { it.isNotBlank() },
+                docId = docId?.value?.takeIf { it.isNotBlank() },
+                docTitle = docTitle?.takeIf { it.isNotBlank() },
+                docLocator = locator?.takeIf { it.isNotBlank() },
+                sentAt = System.currentTimeMillis(),
+            ),
+        )
+        return id
+    }
 
-    override suspend fun send(id: Long, firstMessage: String) {
+    override suspend fun send(id: String, firstMessage: String) {
         val conversation = (conversations.get(id) ?: return).toDomain()
         if (!conversation.isDraft) return
         val sent = conversation.send(firstMessage, at = System.currentTimeMillis())
@@ -94,9 +105,10 @@ class RoomConversations(
         conversations.rename(id, sent.title)
     }
 
-    override suspend fun append(id: Long, message: Message) {
+    override suspend fun append(id: String, message: Message) {
         messages.insert(
             MessageEntity(
+                id = message.id.ifBlank { uuidV7() },
                 conversationId = id,
                 role = if (message.role == Message.Role.Assistant) "assistant" else "user",
                 text = message.text,
@@ -106,20 +118,21 @@ class RoomConversations(
         conversations.touch(id, System.currentTimeMillis())
     }
 
-    override suspend fun rename(id: Long, title: String) {
+    override suspend fun rename(id: String, title: String) {
         ConversationTitle.normalize(title)?.let { conversations.rename(id, it) }
     }
 
-    override suspend fun setProvider(id: Long, provider: ProviderId) =
+    override suspend fun setProvider(id: String, provider: ProviderId) =
         conversations.setProvider(id, provider.value)
 
-    override suspend fun recordUsage(id: Long, promptTokens: Int?, completionTokens: Int?) =
+    override suspend fun recordUsage(id: String, promptTokens: Int?, completionTokens: Int?) =
         conversations.recordUsage(id, promptTokens, completionTokens, System.currentTimeMillis())
 
-    override suspend fun compact(id: Long, summary: String) = db.withTransaction {
+    override suspend fun compact(id: String, summary: String) = db.withTransaction {
         messages.supersedeActive(id)
         messages.insert(
             MessageEntity(
+                id = uuidV7(),
                 conversationId = id,
                 role = "assistant",
                 text = summary,
@@ -130,7 +143,7 @@ class RoomConversations(
         conversations.touch(id, System.currentTimeMillis())
     }
 
-    override suspend fun delete(id: Long, keepImages: Boolean) {
+    override suspend fun delete(id: String, keepImages: Boolean) {
         if (!keepImages && chatImages != null) {
             val paths = messages.imagePathsFor(id) +
                 listOfNotNull(conversations.get(id)?.contextImagePath)

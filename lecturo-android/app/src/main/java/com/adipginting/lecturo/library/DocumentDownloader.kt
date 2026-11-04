@@ -6,10 +6,10 @@ import com.adipginting.lecturo.domain.library.DocumentFormat
 import com.adipginting.lecturo.domain.library.Documents
 import com.adipginting.lecturo.domain.library.Provenance
 import com.adipginting.lecturo.domain.shared.DocumentId
+import com.adipginting.lecturo.domain.shared.uuidV7
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
 
 /**
  * Downloads a document from a web URL into app-private storage and registers
@@ -29,7 +29,7 @@ class DocumentDownloader(
         remoteId: String? = null,
     ): Document = withContext(Dispatchers.IO) {
         fetch.fetch(url, headers).use { book ->
-            val id = UUID.randomUUID().toString()
+            val id = uuidV7()
             val fileName = "$id.${book.format}"
             val dir = File(context.filesDir, "documents").apply { mkdirs() }
             book.body.byteStream().use { input ->

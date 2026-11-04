@@ -6,7 +6,7 @@ namespace Lecturo.Domain.Chat;
 /// and providers adapt to this, not the other way round.
 /// </summary>
 public sealed record Conversation(
-    long Id,
+    string Id,
     string Title,
     Excerpt Excerpt,
     string Locator,
@@ -14,8 +14,8 @@ public sealed record Conversation(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     DateTime? SentAt = null,
-    long? PromptId = null,
-    long? DocumentId = null,
+    string? PromptId = null,
+    string? DocumentId = null,
     string? DocumentTitle = null,
     string SystemPrompt = "",
     DocumentFormat? DocumentFormat = null,
@@ -42,14 +42,14 @@ public sealed record Conversation(
 
     /// <summary>A newly captured excerpt, waiting to be asked about.</summary>
     public static Conversation Draft(
-        long id,
+        string id,
         Excerpt excerpt,
         string locator,
         string provider,
         DateTime createdAt,
-        long? documentId = null,
+        string? documentId = null,
         string? documentTitle = null,
-        long? promptId = null,
+        string? promptId = null,
         string systemPrompt = "") =>
         new(
             id,

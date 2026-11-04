@@ -89,7 +89,7 @@ class MainActivity : FragmentActivity() {
                         )
                     }
                     composable("chat/{conversationId}") { entry ->
-                        val id = entry.arguments?.getString("conversationId")?.toLongOrNull()
+                        val id = entry.arguments?.getString("conversationId")
                             ?: return@composable
                         ChatScreen(
                             conversationId = id,

@@ -344,7 +344,7 @@ public partial class ReaderView : UserControl
 
             var directory = Path.Combine(AppPaths.DataDir, "chat_images");
             Directory.CreateDirectory(directory);
-            var path = Path.Combine(directory, Guid.NewGuid().ToString("N") + ".png");
+            var path = Path.Combine(directory, Lecturo.Domain.UuidV7.New() + ".png");
             crop.Save(path);
 
             ExitCrop();

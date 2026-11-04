@@ -55,7 +55,7 @@ Domain/          the model and its rules; no dependencies at all (Conversation, 
 Application/     use cases + ports (references Domain only)
 Infrastructure/  adapters: SQLite repositories, HTTP, settings, secrets
 Services/        rendering helpers still in the app (ReaderService, CoverService, MathsHtml)
-Tests/           xunit over the domain, the use cases (fakes), the migrations, the layering
+Tests/           xunit over the domain, the use cases (fakes), the schema, the layering
 ViewModels/      MVVM view models (CommunityToolkit.Mvvm)
 Views/           Avalonia XAML screens + code-behind
 Controls/        FieldBox, MarkdownPresenter

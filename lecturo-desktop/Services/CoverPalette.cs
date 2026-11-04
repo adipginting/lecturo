@@ -17,5 +17,23 @@ public static class CoverPalette
     public static IBrush Foreground(long id) =>
         new SolidColorBrush(Color.Parse(Foregrounds[Index(id)]));
 
+    /// <summary>A stable tint for a string id, such as a UUIDv7 document id.</summary>
+    public static IBrush Background(string id) =>
+        new SolidColorBrush(Color.Parse(Backgrounds[Index(Seed(id))]));
+
+    public static IBrush Foreground(string id) =>
+        new SolidColorBrush(Color.Parse(Foregrounds[Index(Seed(id))]));
+
     private static int Index(long id) => (int)((id & long.MaxValue) % Backgrounds.Length);
+
+    private static long Seed(string id)
+    {
+        unchecked
+        {
+            long hash = 17;
+            foreach (var c in id)
+                hash = hash * 31 + c;
+            return hash;
+        }
+    }
 }

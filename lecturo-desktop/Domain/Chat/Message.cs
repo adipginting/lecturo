@@ -5,8 +5,8 @@ namespace Lecturo.Domain.Chat;
 /// summary standing in for several older turns.
 /// </summary>
 public sealed record Message(
-    long Id,
-    long ConversationId,
+    string Id,
+    string ConversationId,
     MessageRole Role,
     string Content,
     DateTime CreatedAt,

@@ -9,8 +9,8 @@ namespace Lecturo.Application.Chat;
 public interface IPromptRepository
 {
     List<Prompt> List();
-    Prompt? Get(long id);
-    long Add(string name, string content);
-    void Update(long id, string name, string content);
-    void Delete(long id);
+    Prompt? Get(string id);
+    string Add(string name, string content);
+    void Update(string id, string name, string content);
+    void Delete(string id);
 }

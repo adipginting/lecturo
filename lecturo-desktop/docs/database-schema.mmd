@@ -1,0 +1,87 @@
+%% Lecturo Desktop schema (SQLite) — single baseline (migrations reset to zero)
+%% Every generated key is a UUIDv7 string; SQLite cannot mint one, so the
+%% repositories generate it on insert. Single-user: no user table.
+%% A compaction summary is a message whose role is `summary`.
+erDiagram
+    documents {
+        TEXT id PK "uuid v7"
+        TEXT title
+        TEXT file_name
+        TEXT format "pdf | epub"
+        TEXT last_locator "opaque"
+        TEXT updated_at
+    }
+
+    prompts {
+        TEXT id PK "uuid v7"
+        TEXT name
+        TEXT content
+    }
+
+    conversations {
+        TEXT id PK "uuid v7"
+        TEXT title
+        TEXT prompt_id FK "nullable"
+        TEXT created_at
+        TEXT document_id FK "nullable"
+        TEXT excerpt "the frozen excerpt"
+        TEXT locator
+        TEXT provider
+        TEXT updated_at
+        TEXT context_image_path "screenshot context"
+        TEXT system_prompt
+        TEXT sent_at "NULL = draft"
+        INTEGER last_prompt_tokens
+        TEXT last_call_at
+    }
+
+    messages {
+        TEXT id PK "uuid v7"
+        TEXT conversation_id FK
+        TEXT role "user | assistant | summary"
+        TEXT content
+        TEXT created_at
+        INTEGER superseded "folded by compaction"
+    }
+
+    document_sources {
+        TEXT id PK "uuid v7"
+        TEXT document_id FK
+        TEXT source "calibre | zotero"
+        TEXT remote_id
+        TEXT url
+        TEXT title
+        TEXT created_at
+    }
+
+    skills {
+        TEXT id PK "uuid v7"
+        TEXT skill_id "catalog id, unique"
+        TEXT name
+        TEXT description
+        TEXT author
+        TEXT version
+        TEXT scope "message | conversation | book"
+        TEXT trigger "on_demand | on_save"
+        TEXT prompt
+        TEXT price
+        INTEGER enabled
+        TEXT installed_at
+    }
+
+    skill_runs {
+        TEXT id PK "uuid v7"
+        TEXT document_id FK "nullable"
+        TEXT skill_id
+        TEXT skill_name
+        TEXT status "running | done | failed"
+        TEXT result
+        TEXT error
+        TEXT created_at
+    }
+
+    documents |o..o{ conversations : "document_id (set null)"
+    prompts |o..o{ conversations : "prompt_id (set null)"
+    conversations ||..o{ messages : "conversation_id (cascade)"
+    documents ||..o{ document_sources : "document_id (cascade)"
+    documents |o..o{ skill_runs : "document_id (cascade)"

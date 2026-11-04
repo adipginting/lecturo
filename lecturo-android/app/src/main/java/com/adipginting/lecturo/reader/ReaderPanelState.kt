@@ -13,10 +13,10 @@ sealed interface PanelMode {
     data object Chats : PanelMode
 
     /** Composing the first message about an excerpt. */
-    data class Draft(val id: Long) : PanelMode
+    data class Draft(val id: String) : PanelMode
 
     /** An open conversation. */
-    data class Conversation(val id: Long) : PanelMode
+    data class Conversation(val id: String) : PanelMode
 }
 
 /**
@@ -34,9 +34,9 @@ class ReaderPanelState {
 
     fun openChats() = show(PanelMode.Chats)
 
-    fun openDraft(id: Long) = show(PanelMode.Draft(id))
+    fun openDraft(id: String) = show(PanelMode.Draft(id))
 
-    fun openConversation(id: Long) = show(PanelMode.Conversation(id))
+    fun openConversation(id: String) = show(PanelMode.Conversation(id))
 
     /** Puts the panel away. What was showing is not kept here. */
     fun collapse() = show(PanelMode.Hidden)

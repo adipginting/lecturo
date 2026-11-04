@@ -13,7 +13,7 @@ import org.junit.Test
 class ActiveConversationTest {
 
     private fun conversation(id: Long, updatedAt: Long, sentAt: Long? = updatedAt) = Conversation(
-        id = id,
+        id = id.toString(),
         title = "Chat $id",
         providerId = "deepseek",
         excerpt = Excerpt(),

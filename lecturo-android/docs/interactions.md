@@ -28,7 +28,7 @@ not enabled never sees the event: with the panel closed, Back leaves the reader.
 
 **G2 — The library is app-owned.**
 *Condition:* import or download.
-*Narration:* the file is copied into app storage with a UUID name; the original is
+*Narration:* the file is copied into app storage with a UUIDv7 name; the original is
 untouched. Deleting a document deletes that copy and its rows — never a remote
 library's copy.
 

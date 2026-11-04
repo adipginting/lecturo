@@ -111,7 +111,7 @@ class ConversationListViewModel(app: Application) : AndroidViewModel(app) {
     var createError by mutableStateOf<String?>(null)
         private set
 
-    fun create(promptId: Long?, onCreated: (Long) -> Unit) {
+    fun create(promptId: String?, onCreated: (String) -> Unit) {
         viewModelScope.launch {
             createError = null
             val providerId = selectedProvider.value
@@ -123,11 +123,11 @@ class ConversationListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun delete(id: Long) {
+    fun delete(id: String) {
         viewModelScope.launch { store.delete(id) }
     }
 
-    fun rename(id: Long, title: String) {
+    fun rename(id: String, title: String) {
         viewModelScope.launch { store.rename(id, title) }
     }
 }
@@ -136,7 +136,7 @@ class ConversationListViewModel(app: Application) : AndroidViewModel(app) {
 @Composable
 fun ConversationListScreen(
     onBack: () -> Unit,
-    onOpenConversation: (Long) -> Unit,
+    onOpenConversation: (String) -> Unit,
     vm: ConversationListViewModel = viewModel(),
 ) {
     val conversations by vm.conversations.collectAsState()
@@ -216,9 +216,9 @@ fun ConversationListScreen(
 internal fun ConversationListBody(
     conversations: List<Conversation>,
     emptyText: String,
-    onOpenConversation: (Long) -> Unit,
-    onRename: (Long, String) -> Unit,
-    onDelete: (Long) -> Unit,
+    onOpenConversation: (String) -> Unit,
+    onRename: (String, String) -> Unit,
+    onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var pendingDelete by remember { mutableStateOf<Conversation?>(null) }
@@ -397,9 +397,9 @@ private fun NewConversationDialog(
     prompts: List<Prompt>,
     error: String?,
     onDismiss: () -> Unit,
-    onCreate: (Long?) -> Unit,
+    onCreate: (String?) -> Unit,
 ) {
-    var chosen by remember { mutableStateOf<Long?>(null) }
+    var chosen by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("New conversation ($providerName)") },
@@ -441,7 +441,7 @@ private val PROVIDER_IDS =
 
 class ChatViewModel(
     app: Application,
-    private val conversationId: Long,
+    private val conversationId: String,
 ) : AndroidViewModel(app) {
     private val store: Conversations = AppContainer.conversations(app)
     private val promptsStore: Prompts = AppContainer.prompts(app)
@@ -684,7 +684,7 @@ internal suspend fun contextImageForSend(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
-    conversationId: Long,
+    conversationId: String,
     onBack: () -> Unit,
     vm: ChatViewModel = viewModel(
         key = "chat-$conversationId",

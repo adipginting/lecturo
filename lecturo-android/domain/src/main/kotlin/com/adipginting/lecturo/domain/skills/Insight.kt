@@ -2,7 +2,7 @@ package com.adipginting.lecturo.domain.skills
 
 /** The result of one skill run, attached to the document it was run against. */
 data class Insight(
-    val id: Long,
+    val id: String,
     val docId: String,
     val skillId: String,
     val status: Status,

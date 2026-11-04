@@ -7,7 +7,7 @@
 | Runtime | .NET 10 (`net10.0`) |
 | UI | Avalonia 12.1.1 (FluentTheme, light) |
 | MVVM | CommunityToolkit.Mvvm 8.4.2 (partial `[ObservableProperty]`, `[RelayCommand]`) |
-| Storage | Microsoft.Data.Sqlite 10.0.11, hand-written SQL + migrations |
+| Storage | Microsoft.Data.Sqlite 10.0.11, hand-written SQL, single-baseline schema |
 | WebView | Avalonia.Controls.WebView 12.1.0 (`NativeWebView`) — **fallback only** |
 | Markdown | Markdig 1.3.2 (render), ReverseMarkdown 6.2.1 (EPUB XHTML → Markdown) |
 | PDF | PdfPig 0.1.16 (text extraction + embedded-image extraction) |
@@ -20,7 +20,7 @@ Five projects, all `net10.0`:
 | `Application/Lecturo.Application.csproj` | Use cases and **ports** (repository/fetcher/chat interfaces); references `Domain` only |
 | `Infrastructure/Lecturo.Infrastructure.csproj` | Adapters implementing the ports — SQLite repositories, `FileStore`, the HTTP fetcher and skill catalog, `ChatClient`, the remote-library sources, the settings and secret stores |
 | `Domain/Lecturo.Domain.csproj` | The model and its rules — `Conversation`, `Excerpt`, `Message`, `ConversationTitle` (in `Domain.Chat`), `Document`, `RenderMode`, `Prompt`, `Skill`, `Provenance` |
-| `Tests/Lecturo.Tests.csproj` | xunit tests over the domain, the use cases (fakes, no DB), the migrations, and the layering |
+| `Tests/Lecturo.Tests.csproj` | xunit tests over the domain, the use cases (fakes, no DB), the schema, and the layering |
 
 The domain references nothing. It does not know what SQLite is, what HTTP is, or
 that Avalonia exists, so the rules in it cannot be bent by a view that finds them
@@ -45,7 +45,7 @@ Application/                use cases + ports (references Domain only)
 Services/                   rendering helpers still in the app (ReaderService, CoverService, MathsHtml)
 Infrastructure/             adapters: SQLite repositories, HTTP, settings, secrets (implements Application ports)
 Domain/                     the model and its rules, in its own project
-Tests/                      xunit: the domain, the use cases (fakes), the migrations, the layering
+Tests/                      xunit: the domain, the use cases (fakes), the schema, the layering
 Styles/ + Controls/         design system and reusable controls
 ```
 
@@ -60,17 +60,13 @@ in `Application/`.
 
 ## Data model (SQLite, `~/.local/share/lecturo/lecturo.db`)
 
-Migrations are gated by `PRAGMA user_version`; the database is currently at **v7**.
-
-| Version | Change |
-|---|---|
-| 1 | `documents`, `basket_items`, `saved_prompts`, `conversations`, `messages` |
-| 2 | `conversations` += `document_id`, `excerpt`, `locator`, `provider`, `updated_at` (per-excerpt chats) |
-| 3 | `document_sources` (which remote item a local document came from) |
-| 4 | `messages.superseded` (compaction) |
-| 5 | `conversations.context_image_path` (screenshot context) |
-| 6 | `skills`, `skill_runs`, `conversations.system_prompt` |
-| 7 | `conversations.sent_at` — a draft is an unsent conversation. `basket_items` rows become drafts and the table is dropped; `saved_prompts` → `prompts`, `conversations.saved_prompt_id` → `prompt_id` |
+The schema is a single baseline: `PRAGMA user_version` is **1**, and
+`Database.ApplyMigration1` creates every table directly. The app is pre-release,
+so the migration history was reset to zero rather than accumulated. The tables
+are `documents`, `prompts`, `conversations`, `messages`, `document_sources`,
+`skills` and `skill_runs`, and every generated primary key is a UUIDv7 string
+(SQLite cannot mint one, so the repositories generate it on insert). See
+[database-schema.svg](database-schema.svg) for the shape.
 
 Repositories (in `Infrastructure/`): `DocumentRepository`, `ChatRepository`,
 `PromptRepository` (prompts are their own aggregate), `DocumentSourceRepository`

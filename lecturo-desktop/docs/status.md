@@ -1,9 +1,10 @@
 # Status
 
-Build is green, 75 tests pass. The layers are now `Domain` / `Application` /
+Build is green, 78 tests pass. The layers are now `Domain` / `Application` /
 `Infrastructure` over ports, with view models taking application services rather
-than repositories ([ADR 0003](adr/0003-application-layer-over-ports.md)). Schema
-is at v8, and a draft is an unsent conversation
+than repositories ([ADR 0003](adr/0003-application-layer-over-ports.md)). The
+schema is a single baseline (v1, every key a UUIDv7 string), and a draft is an
+unsent conversation
 ([ADR 0002](adr/0002-drafts-are-unsent-conversations.md)) — the saved queue is
 gone, so the scenarios below that describe saving a passage now describe asking
 about it. This is the coverage map against
@@ -97,6 +98,6 @@ interaction spec). Legend: **Built** · **Partial** · **N/A** · **Planned**.
 - **UI font** deviates from the Foundations sheet by decision (Plus Jakarta Sans).
 - **Maths** typesets TeX, not MathML: an EPUB that ships `<math>` renders its
   source, as on mobile.
-- ~~**No automated tests**~~ — 25 now: the domain rules (`Conversation`,
-  `ConversationTitle`, the stored values) and the v7 migration, which is checked
-  against a v6 database seeded with a saved item, a conversation and a prompt.
+- ~~**No automated tests**~~ — 78 now: the domain rules (`Conversation`,
+  `ConversationTitle`, the stored values), the use cases over fakes, and the
+  repository round-trips against a fresh database.

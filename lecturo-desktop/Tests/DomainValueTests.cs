@@ -66,4 +66,22 @@ public class DomainValueTests
         Assert.Equal("calibre\u001f42", Provenance.Key("calibre", "42"));
         Assert.NotEqual(Provenance.Key("calibre", "42"), Provenance.Key("zotero", "42"));
     }
+
+    [Fact]
+    public void A_uuid_v7_is_lowercase_hyphenated_and_ordered_by_time()
+    {
+        var first = UuidV7.New();
+
+        Assert.Equal(36, first.Length);
+        Assert.Equal('7', first[14]);
+        Assert.True("89ab".Contains(first[19]), "The variant bits are not RFC 9562.");
+        Assert.True(first.All(c => char.IsAsciiHexDigit(c) || c == '-'), "Not a lowercase hyphenated hex id.");
+
+        // The 48-bit big-endian timestamp leads, so a later id sorts after the
+        // first as soon as the millisecond advances.
+        var later = first;
+        while (later[..13] == first[..13])
+            later = UuidV7.New();
+        Assert.True(string.CompareOrdinal(first, later) < 0);
+    }
 }

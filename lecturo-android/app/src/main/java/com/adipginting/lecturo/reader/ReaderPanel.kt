@@ -57,7 +57,7 @@ import com.adipginting.lecturo.chat.ProviderButton
 internal fun ReaderPanel(
     mode: PanelMode,
     onOpenChats: () -> Unit,
-    onOpenConversation: (Long) -> Unit,
+    onOpenConversation: (String) -> Unit,
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
 ) {

@@ -27,7 +27,7 @@ class SkillRun(context: Context) {
     private val documents: Documents = AppContainer.documents(app)
     private val settings = ChatSettings(app)
 
-    suspend fun run(docId: String, skill: Skill): Long {
+    suspend fun run(docId: String, skill: Skill): String {
         val runId = skills.startRun(docId, skill.id)
         try {
             val document = documents.get(DocumentId(docId))

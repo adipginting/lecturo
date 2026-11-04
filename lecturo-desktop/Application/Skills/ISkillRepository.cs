@@ -10,7 +10,7 @@ public interface ISkillRepository
     void Install(RemoteSkill skill);
     void Uninstall(string skillId);
     void SetEnabled(string skillId, bool enabled);
-    long AddRun(long? documentId, Skill skill, RunStatus status);
-    void CompleteRun(long runId, RunStatus status, string result, string error);
-    List<SkillRun> ListRuns(long? documentId);
+    string AddRun(string? documentId, Skill skill, RunStatus status);
+    void CompleteRun(string runId, RunStatus status, string result, string error);
+    List<SkillRun> ListRuns(string? documentId);
 }

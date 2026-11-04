@@ -197,7 +197,7 @@ class ReaderViewModel(
         docId: String = this.docId,
         docTitle: String? = uiState.title,
         locator: String? = resolveLocator(null),
-        onCreated: (Long) -> Unit,
+        onCreated: (String) -> Unit,
     ) {
         viewModelScope.launch {
             val id = store.createDraft(

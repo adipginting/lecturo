@@ -6,9 +6,9 @@ import kotlinx.coroutines.flow.Flow
 interface Prompts {
     fun observeAll(): Flow<List<Prompt>>
 
-    suspend fun get(id: Long): Prompt?
+    suspend fun get(id: String): Prompt?
 
-    suspend fun save(prompt: Prompt): Long
+    suspend fun save(prompt: Prompt): String
 
-    suspend fun delete(id: Long)
+    suspend fun delete(id: String)
 }

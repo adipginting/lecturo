@@ -60,7 +60,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 
-class DraftChatViewModel(app: Application, private val draftId: Long) : AndroidViewModel(app) {
+class DraftChatViewModel(app: Application, private val draftId: String) : AndroidViewModel(app) {
     private val store: Conversations = AppContainer.conversations(app)
     private val promptsStore: Prompts = AppContainer.prompts(app)
     private val chatImages = ChatImages(File(app.filesDir, "chat_images"))
@@ -90,7 +90,7 @@ class DraftChatViewModel(app: Application, private val draftId: Long) : AndroidV
         private set
     var error by mutableStateOf<String?>(null)
         private set
-    var sentConversationId by mutableStateOf<Long?>(null)
+    var sentConversationId by mutableStateOf<String?>(null)
         private set
 
     fun send(text: String) {
@@ -148,7 +148,7 @@ class DraftChatViewModel(app: Application, private val draftId: Long) : AndroidV
 @Composable
 internal fun DraftChatBody(
     vm: DraftChatViewModel,
-    onSent: (Long) -> Unit,
+    onSent: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Composed before the draft is read, so a send that clears the holder still

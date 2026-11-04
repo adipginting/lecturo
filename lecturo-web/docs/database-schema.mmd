@@ -1,0 +1,156 @@
+%% Lecturo Web schema (Postgres) — single baseline (migrations reset to zero)
+%% Every generated key is UUIDv7 via uuid_v7(); every row is owned by a user.
+erDiagram
+    users {
+        uuid id PK "uuid v7"
+        text email
+        text password_hash
+        timestamptz created_at
+    }
+
+    sessions {
+        text token_hash PK "hash only"
+        uuid user_id FK
+        text csrf_token
+        timestamptz created_at
+        timestamptz expires_at
+    }
+
+    documents {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        text title
+        text format "pdf | epub"
+        text locator "opaque: page or CFI"
+        bigint byte_size
+        text blob_key "object store"
+        text source "calibre | zotero"
+        text remote_id
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    saved_prompts {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        text title
+        text body
+        timestamptz created_at
+    }
+
+    images {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        text content_type
+        bigint byte_size
+        text blob_key "object store"
+        timestamptz created_at
+    }
+
+    conversations {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        uuid document_id FK "nullable"
+        text title
+        text excerpt "the frozen excerpt"
+        text locator
+        uuid prompt_id FK "nullable"
+        text provider
+        text model
+        uuid context_image_id FK "nullable"
+        text doc_title "survives doc delete"
+        timestamptz sent_at "NULL = draft"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    messages {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        uuid conversation_id FK
+        text role "user | assistant"
+        text content
+        boolean superseded "folded by compaction"
+        boolean is_summary
+        uuid image_id FK "nullable"
+        timestamptz created_at
+    }
+
+    provider_settings {
+        uuid user_id PK
+        text provider
+        timestamptz updated_at
+    }
+
+    provider_credentials {
+        uuid user_id PK
+        text provider PK
+        text base_url
+        text model
+        bytea api_key_enc "encrypted"
+        timestamptz updated_at
+    }
+
+    server_settings {
+        uuid user_id PK
+        text calibre_url
+        text calibre_user
+        bytea calibre_password_enc "encrypted"
+        text zotero_user_id
+        bytea zotero_api_key_enc "encrypted"
+        timestamptz updated_at
+    }
+
+    model_vision_overrides {
+        uuid user_id PK
+        text model PK
+        boolean supports_images
+        timestamptz updated_at
+    }
+
+    skills {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        text skill_id "catalog id"
+        text name
+        text description
+        text author
+        text version
+        text scope "message | conversation | book"
+        text trigger "on_demand | on_save"
+        text prompt
+        text price
+        boolean enabled
+        timestamptz installed_at
+    }
+
+    skill_runs {
+        uuid id PK "uuid v7"
+        uuid user_id FK
+        text skill_id
+        text skill_name
+        uuid document_id FK "nullable"
+        text status "running | done | failed"
+        text result
+        text error
+        timestamptz created_at
+    }
+
+    users ||--o{ sessions : "user_id (cascade)"
+    users ||--o{ documents : "user_id (cascade)"
+    users ||--o{ saved_prompts : "user_id (cascade)"
+    users ||--o{ images : "user_id (cascade)"
+    users ||--o{ conversations : "user_id (cascade)"
+    users ||--o{ messages : "user_id (cascade)"
+    users ||--o{ provider_settings : "user_id (cascade)"
+    users ||--o{ provider_credentials : "user_id (cascade)"
+    users ||--o{ server_settings : "user_id (cascade)"
+    users ||--o{ model_vision_overrides : "user_id (cascade)"
+    users ||--o{ skills : "user_id (cascade)"
+    users ||--o{ skill_runs : "user_id (cascade)"
+    documents |o..o{ conversations : "document_id (set null)"
+    saved_prompts |o..o{ conversations : "prompt_id (set null)"
+    images |o..o{ conversations : "context_image_id (set null)"
+    images |o..o{ messages : "image_id (set null)"
+    conversations ||..o{ messages : "conversation_id (cascade)"
+    documents |o..o{ skill_runs : "document_id (set null)"

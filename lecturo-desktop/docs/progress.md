@@ -3,6 +3,11 @@
 Running log of implementation sessions. Read this first when picking up work.
 Companion to `plan.md` (the spec); both files are gitignored local docs.
 
+> **Schema reset (later).** Migrations were reset to a single baseline
+> (`user_version = 1`) and every generated key is now a UUIDv7 string. The
+> migration-by-migration entries below are historical and no longer describe
+> the shipped schema.
+
 ## 2026-08-23 — Foundation (done)
 
 **State: builds clean (`dotnet build`). Nothing user-facing yet.**

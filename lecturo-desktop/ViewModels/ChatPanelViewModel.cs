@@ -32,7 +32,7 @@ public enum MessageDelivery
 public partial class ChatBubble : ObservableObject
 {
     public ChatBubble(
-        long id,
+        string id,
         MessageRole role,
         string content,
         bool superseded = false,
@@ -47,7 +47,7 @@ public partial class ChatBubble : ObservableObject
         HasMath = hasMath;
     }
 
-    public long Id { get; set; }
+    public string Id { get; set; }
     public MessageRole Role { get; }
     public string Content { get; }
     public bool Superseded { get; }
@@ -101,8 +101,8 @@ public partial class ChatPanelViewModel : ViewModelBase
     private readonly IPromptRepository _prompts;
     private readonly ISettingsStore _settings;
 
-    private long? _conversationId;
-    private long? _documentId;
+    private string? _conversationId;
+    private string? _documentId;
     private bool _isDraft;
     private int? _lastPromptTokens;
     private DateTime? _lastCallAt;
@@ -166,7 +166,7 @@ public partial class ChatPanelViewModel : ViewModelBase
     public bool IsConversation => Mode == ChatPanelMode.Conversation;
 
     /// <summary>The document the open conversation belongs to, if any.</summary>
-    public long? DocumentId => _documentId;
+    public string? DocumentId => _documentId;
 
     /// <summary>
     /// Appends an excerpt to this open conversation as its next message and sends
@@ -373,7 +373,7 @@ public partial class ChatPanelViewModel : ViewModelBase
 
         // The reader's message appears at once, marked "Sending…", so the composer
         // is never the only sign it was sent.
-        var pending = new ChatBubble(0, MessageRole.User, text, createdAt: DateTime.UtcNow)
+        var pending = new ChatBubble("", MessageRole.User, text, createdAt: DateTime.UtcNow)
         {
             Delivery = MessageDelivery.Sending,
         };
@@ -426,7 +426,7 @@ public partial class ChatPanelViewModel : ViewModelBase
         }
     }
 
-    private void LoadMessages(long conversationId)
+    private void LoadMessages(string conversationId)
     {
         Messages.Clear();
         foreach (var message in _conversations.Messages(conversationId))
@@ -443,7 +443,7 @@ public partial class ChatPanelViewModel : ViewModelBase
     /// pays for the WebView that typesets formulas — and the setting is obeyed
     /// when the message is shown rather than when it was written.
     /// </summary>
-    private ChatBubble Bubble(long id, MessageRole role, string content, DateTime createdAt, bool superseded = false) =>
+    private ChatBubble Bubble(string id, MessageRole role, string content, DateTime createdAt, bool superseded = false) =>
         new(id, role, content, superseded, createdAt,
             hasMath: _settings.Settings.TypesetFormulas && MathSplit.HasMath(content));
 

@@ -23,9 +23,9 @@ public class SkillServiceTests
     }
 
     private static Skill Skill(string id, string price) =>
-        new(0, id, id, "", "", "1.0", "message", "on_demand", "Summarize this.", price, true);
+        new("0", id, id, "", "", "1.0", "message", "on_demand", "Summarize this.", price, true);
 
-    private static Document Doc() => new(7, "A Book", "book.epub", DocumentFormat.Epub, null, DateTime.UtcNow);
+    private static Document Doc() => new("7", "A Book", "book.epub", DocumentFormat.Epub, null, DateTime.UtcNow);
 
     [Fact]
     public async Task A_paid_skill_is_refused_before_a_run_is_recorded()

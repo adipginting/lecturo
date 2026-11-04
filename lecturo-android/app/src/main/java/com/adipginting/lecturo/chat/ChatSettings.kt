@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
+import com.adipginting.lecturo.domain.shared.uuidV7
 
 private val Context.chatStore by preferencesDataStore(name = "chat")
 
@@ -69,7 +69,7 @@ class ChatSettings(private val context: Context) {
         cachedDeviceId ?: run {
             val stored = context.chatStore.data.first()[KEY_DEVICE_ID]
                 ?.takeIf { it.isNotBlank() }
-            val id = stored ?: UUID.randomUUID().toString().also { generated ->
+            val id = stored ?: uuidV7().also { generated ->
                 context.chatStore.edit { it[KEY_DEVICE_ID] = generated }
             }
             cachedDeviceId = id

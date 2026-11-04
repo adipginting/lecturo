@@ -13,7 +13,7 @@ namespace Lecturo.Services;
 /// </summary>
 public sealed partial class CoverService
 {
-    public string CoverPath(long documentId) => Path.Combine(AppPaths.DataDir, "covers", documentId.ToString());
+    public string CoverPath(string documentId) => Path.Combine(AppPaths.DataDir, "covers", documentId);
 
     /// <summary>Returns the cached cover path, extracting it on first use; null if none.</summary>
     public string? EnsureCover(Document doc, string filePath)

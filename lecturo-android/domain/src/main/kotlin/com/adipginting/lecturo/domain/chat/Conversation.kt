@@ -6,7 +6,7 @@ package com.adipginting.lecturo.domain.chat
  * and providers adapt to this, not the other way round.
  */
 data class Conversation(
-    val id: Long,
+    val id: String,
     val title: String,
     val providerId: String,
     val excerpt: Excerpt,
@@ -14,7 +14,7 @@ data class Conversation(
     val docTitle: String? = null,
     val docLocator: String? = null,
     /** Saved prompt chosen at start; locked thereafter. */
-    val promptId: Long? = null,
+    val promptId: String? = null,
     /** One-off prompt typed at start, when no saved prompt is used. */
     val customPrompt: String? = null,
     val messages: List<Message> = emptyList(),
@@ -55,7 +55,7 @@ data class Conversation(
 
     companion object {
         fun draft(
-            id: Long,
+            id: String,
             providerId: String,
             excerpt: Excerpt,
             docId: String? = null,

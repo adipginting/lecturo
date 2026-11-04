@@ -12,19 +12,19 @@ public interface IConversationRepository
 {
     List<Conversation> ListDrafts();
     List<Conversation> ListConversations();
-    Conversation? Get(long id);
-    Conversation? FindDraftForDocument(long documentId);
-    Conversation? FindActiveConversationForDocument(long documentId);
-    long CreateDraft(Excerpt excerpt, string locator, string provider, long? documentId = null, long? promptId = null, string systemPrompt = "");
-    long CreateSentConversation(string title, Excerpt excerpt, string locator, string provider, DateTime sentAt, long? documentId = null, long? promptId = null, string systemPrompt = "");
-    void MarkSent(long id, string title, DateTime sentAt);
-    void RenameConversation(long id, string title);
-    void SetConversationProvider(long id, string provider);
-    void TouchConversation(long id);
-    void DeleteConversation(long id);
-    void RecordUsage(long id, int? promptTokens, DateTime at);
-    void ClearUsage(long id);
-    List<Message> ListMessages(long conversationId);
-    void MarkSuperseded(IReadOnlyCollection<long> messageIds);
-    long AddMessage(long conversationId, MessageRole role, string content);
+    Conversation? Get(string id);
+    Conversation? FindDraftForDocument(string documentId);
+    Conversation? FindActiveConversationForDocument(string documentId);
+    string CreateDraft(Excerpt excerpt, string locator, string provider, string? documentId = null, string? promptId = null, string systemPrompt = "");
+    string CreateSentConversation(string title, Excerpt excerpt, string locator, string provider, DateTime sentAt, string? documentId = null, string? promptId = null, string systemPrompt = "");
+    void MarkSent(string id, string title, DateTime sentAt);
+    void RenameConversation(string id, string title);
+    void SetConversationProvider(string id, string provider);
+    void TouchConversation(string id);
+    void DeleteConversation(string id);
+    void RecordUsage(string id, int? promptTokens, DateTime at);
+    void ClearUsage(string id);
+    List<Message> ListMessages(string conversationId);
+    void MarkSuperseded(IReadOnlyCollection<string> messageIds);
+    string AddMessage(string conversationId, MessageRole role, string content);
 }

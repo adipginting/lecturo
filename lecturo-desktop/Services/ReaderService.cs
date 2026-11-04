@@ -98,7 +98,7 @@ public sealed partial class ReaderService
         }
     }
 
-    private List<ReaderChapter> LoadEpub(long documentId, string epubPath)
+    private List<ReaderChapter> LoadEpub(string documentId, string epubPath)
     {
         var root = Path.Combine(AppPaths.DataDir, "cache", $"epub-{documentId}");
         if (Directory.Exists(root))

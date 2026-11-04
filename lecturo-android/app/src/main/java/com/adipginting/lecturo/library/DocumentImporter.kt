@@ -7,10 +7,10 @@ import com.adipginting.lecturo.domain.library.Document
 import com.adipginting.lecturo.domain.library.DocumentFormat
 import com.adipginting.lecturo.domain.library.Documents
 import com.adipginting.lecturo.domain.shared.DocumentId
+import com.adipginting.lecturo.domain.shared.uuidV7
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
 
 /**
  * Copies a document from a content URI into app-private storage and
@@ -28,7 +28,7 @@ class DocumentImporter(
         val displayName = queryDisplayName(uri) ?: "document"
         val stream = context.contentResolver.openInputStream(uri)?.buffered()
             ?: throw IllegalArgumentException("Cannot open $displayName")
-        val id = UUID.randomUUID().toString()
+        val id = uuidV7()
         val dir = File(context.filesDir, "documents").apply { mkdirs() }
 
         val document = stream.use { input ->

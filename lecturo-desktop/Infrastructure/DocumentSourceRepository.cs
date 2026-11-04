@@ -13,22 +13,24 @@ public sealed class DocumentSourceRepository : IProvenanceRepository
 
     public static string Key(string source, string remoteId) => Provenance.Key(source, remoteId);
 
-    public long Add(long documentId, string source, string remoteId, string url, string title)
+    public string Add(string documentId, string source, string remoteId, string url, string title)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO document_sources(document_id, source, remote_id, url, title, created_at)
-            VALUES ($docId, $source, $remoteId, $url, $title, $now);
-            SELECT last_insert_rowid();
+            INSERT INTO document_sources(id, document_id, source, remote_id, url, title, created_at)
+            VALUES ($id, $docId, $source, $remoteId, $url, $title, $now);
             """;
+        var id = UuidV7.New();
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$docId", documentId);
         cmd.Parameters.AddWithValue("$source", source);
         cmd.Parameters.AddWithValue("$remoteId", remoteId);
         cmd.Parameters.AddWithValue("$url", url);
         cmd.Parameters.AddWithValue("$title", title);
         cmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 
     /// <summary>Every linked remote item, as "source\u001fremoteId".</summary>
@@ -45,7 +47,7 @@ public sealed class DocumentSourceRepository : IProvenanceRepository
     }
 
     /// <summary>The local document a remote item was downloaded into, if any.</summary>
-    public long? FindDocumentId(string source, string remoteId)
+    public string? FindDocumentId(string source, string remoteId)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -57,6 +59,6 @@ public sealed class DocumentSourceRepository : IProvenanceRepository
         cmd.Parameters.AddWithValue("$source", source);
         cmd.Parameters.AddWithValue("$remoteId", remoteId);
         var result = cmd.ExecuteScalar();
-        return result is null or DBNull ? null : (long)result;
+        return result is null or DBNull ? null : (string)result;
     }
 }

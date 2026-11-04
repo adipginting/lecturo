@@ -180,17 +180,17 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     val maxSavedPrompts = 12
 
-    fun savePrompt(id: Long?, title: String, body: String) {
+    fun savePrompt(id: String?, title: String, body: String) {
         viewModelScope.launch {
             if (id == null && prompts.value.size >= maxSavedPrompts) {
                 savedNotice = "Maximum $maxSavedPrompts saved prompts"
                 return@launch
             }
-            Prompt.of(id = id ?: 0, title = title, body = body)?.let { promptsStore.save(it) }
+            Prompt.of(id = id ?: "", title = title, body = body)?.let { promptsStore.save(it) }
         }
     }
 
-    fun deletePrompt(id: Long) {
+    fun deletePrompt(id: String) {
         viewModelScope.launch { promptsStore.delete(id) }
     }
 
@@ -623,7 +623,7 @@ private fun ServerFields(vm: SettingsViewModel) {
 private fun PromptDialog(
     existing: Prompt?,
     onDismiss: () -> Unit,
-    onSave: (Long?, String, String) -> Unit,
+    onSave: (String?, String, String) -> Unit,
 ) {
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var body by remember { mutableStateOf(existing?.body ?: "") }

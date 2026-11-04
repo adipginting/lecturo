@@ -22,7 +22,7 @@ public sealed class DocumentRepository : IDocumentRepository
         return result;
     }
 
-    public Document? Get(long id)
+    public Document? Get(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -32,23 +32,25 @@ public sealed class DocumentRepository : IDocumentRepository
         return reader.Read() ? Read(reader) : null;
     }
 
-    public long Add(string title, string fileName, DocumentFormat format)
+    public string Add(string title, string fileName, DocumentFormat format)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO documents(title, file_name, format, last_locator, updated_at)
-            VALUES ($title, $fileName, $format, NULL, $now);
-            SELECT last_insert_rowid();
+            INSERT INTO documents(id, title, file_name, format, last_locator, updated_at)
+            VALUES ($id, $title, $fileName, $format, NULL, $now);
             """;
+        var id = UuidV7.New();
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$title", title);
         cmd.Parameters.AddWithValue("$fileName", fileName);
         cmd.Parameters.AddWithValue("$format", format.ToStoredValue());
         cmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 
-    public void UpdateLocator(long id, string locator)
+    public void UpdateLocator(string id, string locator)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -59,7 +61,7 @@ public sealed class DocumentRepository : IDocumentRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void Delete(long id)
+    public void Delete(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -69,7 +71,7 @@ public sealed class DocumentRepository : IDocumentRepository
     }
 
     private static Document Read(SqliteDataReader r) => new(
-        r.GetInt64(0),
+        r.GetString(0),
         r.GetString(1),
         r.GetString(2),
         DocumentFormatExtensions.ParseStoredValue(r.GetString(3)),

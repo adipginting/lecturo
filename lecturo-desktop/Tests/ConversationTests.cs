@@ -8,8 +8,8 @@ namespace Lecturo.Tests;
 public class ConversationTests
 {
     private static Conversation NewDraft() =>
-        Conversation.Draft(7, Excerpt.FromText("the passage"), "3", "deepseek",
-            new DateTime(2026, 9, 21, 9, 0, 0, DateTimeKind.Utc), documentId: 42, documentTitle: "A Book");
+        Conversation.Draft("7", Excerpt.FromText("the passage"), "3", "deepseek",
+            new DateTime(2026, 9, 21, 9, 0, 0, DateTimeKind.Utc), documentId: "42", documentTitle: "A Book");
 
     [Fact]
     public void A_new_conversation_is_a_draft()

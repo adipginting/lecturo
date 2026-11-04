@@ -13,12 +13,18 @@ class ReaderChatTargetTest {
 
     @Test
     fun `the active conversation wins over a draft`() {
-        assertEquals(ReaderChatTarget.Conversation(42), readerChatTarget(draftId = 7, activeConversationId = 42))
+        assertEquals(
+            ReaderChatTarget.Conversation("42"),
+            readerChatTarget(draftId = "7", activeConversationId = "42"),
+        )
     }
 
     @Test
     fun `without a conversation the draft is the target`() {
-        assertEquals(ReaderChatTarget.Draft(7), readerChatTarget(draftId = 7, activeConversationId = null))
+        assertEquals(
+            ReaderChatTarget.Draft("7"),
+            readerChatTarget(draftId = "7", activeConversationId = null),
+        )
     }
 
     @Test

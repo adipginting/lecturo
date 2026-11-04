@@ -13,7 +13,7 @@ internal sealed class FakeSkillRepository : ISkillRepository
     public Skill? Get(string skillId) => Installed.FirstOrDefault(s => s.SkillId == skillId);
 
     public void Install(RemoteSkill skill) => Installed.Add(new Skill(
-        0, skill.SkillId, skill.Name, skill.Description, skill.Author, skill.Version,
+        "0", skill.SkillId, skill.Name, skill.Description, skill.Author, skill.Version,
         skill.Scope, skill.Trigger, skill.Prompt, skill.Price, true));
 
     public void Uninstall(string skillId) => Installed.RemoveAll(s => s.SkillId == skillId);
@@ -25,20 +25,20 @@ internal sealed class FakeSkillRepository : ISkillRepository
             Installed[index] = Installed[index] with { Enabled = enabled };
     }
 
-    public long AddRun(long? documentId, Skill skill, RunStatus status)
+    public string AddRun(string? documentId, Skill skill, RunStatus status)
     {
-        Runs.Add(new SkillRun(Runs.Count + 1, documentId, skill.SkillId, skill.Name, status, "", "", DateTime.UtcNow));
-        return Runs.Count;
+        Runs.Add(new SkillRun((Runs.Count + 1).ToString(), documentId, skill.SkillId, skill.Name, status, "", "", DateTime.UtcNow));
+        return Runs.Count.ToString();
     }
 
-    public void CompleteRun(long runId, RunStatus status, string result, string error)
+    public void CompleteRun(string runId, RunStatus status, string result, string error)
     {
         var index = Runs.FindIndex(r => r.Id == runId);
         if (index >= 0)
             Runs[index] = Runs[index] with { Status = status, Result = result, Error = error };
     }
 
-    public List<SkillRun> ListRuns(long? documentId) =>
+    public List<SkillRun> ListRuns(string? documentId) =>
         Runs.Where(r => documentId is null || r.DocumentId == documentId).ToList();
 }
 

@@ -37,7 +37,7 @@ public sealed class JsonSettingsStore : ISettingsStore
 
         if (string.IsNullOrWhiteSpace(Settings.DeviceId))
         {
-            Settings.DeviceId = Guid.NewGuid().ToString("N");
+            Settings.DeviceId = Lecturo.Domain.UuidV7.New();
             Save();
         }
     }

@@ -1,5 +1,6 @@
 package com.adipginting.lecturo.data
 
+import com.adipginting.lecturo.domain.shared.uuidV7
 import com.adipginting.lecturo.domain.skills.Insight
 import com.adipginting.lecturo.domain.skills.STARTER_SKILLS
 import com.adipginting.lecturo.domain.skills.Skill
@@ -37,10 +38,13 @@ class RoomSkills(private val db: LecturoDatabase) : Skills {
     override fun observeRuns(docId: String): Flow<List<Insight>> =
         runs.observeForDoc(docId).map { rows -> rows.map { it.toDomain() } }
 
-    override suspend fun startRun(docId: String, skillId: String): Long =
-        runs.insert(SkillRunEntity(docId = docId, skillId = skillId, status = RUN_RUNNING))
+    override suspend fun startRun(docId: String, skillId: String): String {
+        val id = uuidV7()
+        runs.insert(SkillRunEntity(id = id, docId = docId, skillId = skillId, status = RUN_RUNNING))
+        return id
+    }
 
-    override suspend fun finishRun(id: Long, result: String?, error: String?) = runs.finish(
+    override suspend fun finishRun(id: String, result: String?, error: String?) = runs.finish(
         id = id,
         status = if (error == null) RUN_DONE else RUN_FAILED,
         result = result,

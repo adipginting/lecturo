@@ -6,7 +6,7 @@ import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.UUID
+import com.adipginting.lecturo.domain.shared.uuidV7
 
 /** A chat image read back for an API payload: base64 JPEG plus its MIME type. */
 data class ChatImage(val base64: String, val mime: String)
@@ -45,7 +45,7 @@ class ChatImages(private val dir: File) {
         val (width, height) = scaledImageSize(bitmap.width, bitmap.height)
         val scaled = if (width == bitmap.width && height == bitmap.height) bitmap
         else Bitmap.createScaledBitmap(bitmap, width, height, true)
-        val file = File(dir, "${UUID.randomUUID()}.jpg")
+        val file = File(dir, "${uuidV7()}.jpg")
         file.outputStream().use {
             scaled.compress(Bitmap.CompressFormat.JPEG, CHAT_IMAGE_JPEG_QUALITY, it)
         }

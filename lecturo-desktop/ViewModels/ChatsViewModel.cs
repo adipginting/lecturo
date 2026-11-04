@@ -22,7 +22,7 @@ public partial class ConversationItem : ObservableObject
         RenameText = conversation.Title;
     }
 
-    public long Id => Conversation.Id;
+    public string Id => Conversation.Id;
 
     [ObservableProperty] public partial string Title { get; set; } = "";
     [ObservableProperty] public partial bool IsRenaming { get; set; }

@@ -198,11 +198,13 @@ seam; no Compose screen or ViewModel imports a Room type. `AppContainer` is the
 composition root that wires the adapters to the ports. The other app packages are
 `library/`, `reader/`, `sync/`, `chat/`, `settings/`, `ui/`.
 
-**Storage.** Room holds documents, conversations, messages and prompts — a draft
-is a conversation with a null `sentAt`; DataStore holds preferences and encrypted
-keys. The old saved-items table (`basket_items`) became drafts in migration
-10 → 11 and was dropped in 12 → 13: every saved excerpt is an unsent conversation,
-and no table carries the name "saved".
+**Storage.** Room holds documents, conversations, messages, prompts, skills and
+skill runs — a draft is a conversation with a null `sentAt`. Every generated
+primary key is a UUIDv7 string, so the client mints an id before it has a row.
+The schema is a single baseline (version 1): pre-release, the fifteen-step
+migration history was reset, so a fresh install creates the final shape directly
+and no table carries the retired "saved" vocabulary. DataStore holds preferences
+and encrypted keys. See [database-schema.svg](database-schema.svg) for the shape.
 
 **Positions are opaque strings.** PDF stores a 1-based page number; EPUB stores
 Readium's serialized `Locator` JSON. Nothing else reads that column, so either
@@ -307,8 +309,8 @@ functions. The model call is only a contract.
 
 ## What is checked, and what is not
 
-`./gradlew :app:assembleDebug :app:testDebugUnitTest :domain:test` — 156 app
-tests and 40 in `:domain`, green. They
+`./gradlew :app:assembleDebug :app:testDebugUnitTest :domain:test` — 157 app
+tests and 47 in `:domain`, green. They
 cover the pure logic and the contracts: the HTML-to-Markdown converter and the
 Markdown renderer, the maths splitter and the markdown-to-HTML the maths view is
 handed, the OPDS and Zotero parsers and Calibre's one-row-per-format rule, the

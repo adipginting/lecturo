@@ -23,7 +23,7 @@ public partial class DocumentItem : ObservableObject
 
     partial void OnCoverChanged(Bitmap? value) => OnPropertyChanged(nameof(HasCover));
 
-    public long Id => Document.Id;
+    public string Id => Document.Id;
     public string Title => Document.Title;
 
     public string Initial =>

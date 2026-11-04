@@ -27,7 +27,7 @@ public class ConversationServiceTests
     public async Task Sending_the_first_message_names_the_draft_and_sends_it()
     {
         var (service, conversations, _) = Build(new FakeChatClient("the answer"));
-        var id = service.CreateDraft(Excerpt.FromText("a passage"), "12", Provider, documentId: 7);
+        var id = service.CreateDraft(Excerpt.FromText("a passage"), "12", Provider, documentId: "7");
 
         var result = await service.SendAsync(id, Provider, "What does this mean?");
 

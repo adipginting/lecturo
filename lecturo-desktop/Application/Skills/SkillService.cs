@@ -30,7 +30,7 @@ public sealed class SkillService
 
     public IReadOnlyList<Skill> ListInstalled() => _skills.ListInstalled();
 
-    public IReadOnlyList<SkillRun> ListRuns(long? documentId) => _skills.ListRuns(documentId);
+    public IReadOnlyList<SkillRun> ListRuns(string? documentId) => _skills.ListRuns(documentId);
 
     public void Install(RemoteSkill skill) => _skills.Install(skill);
 
@@ -45,7 +45,7 @@ public sealed class SkillService
     /// Runs a skill against a document. Returns the id of the conversation the run
     /// produced; the run is recorded either way (S41/S42).
     /// </summary>
-    public async Task<long> RunAsync(
+    public async Task<string> RunAsync(
         Document document,
         Skill skill,
         string contextText,
@@ -59,7 +59,7 @@ public sealed class SkillService
         try
         {
             var title = $"{skill.Name} · {document.Title}";
-            long conversationId;
+            string conversationId;
             string result;
             try
             {
@@ -77,7 +77,7 @@ public sealed class SkillService
 
                 var history = new[]
                 {
-                    new Message(0, conversationId, MessageRole.User, contextText, DateTime.UtcNow),
+                    new Message(UuidV7.New(), conversationId, MessageRole.User, contextText, DateTime.UtcNow),
                 };
                 result = (await _chat.CompleteAsync(providerId, skill.Prompt, history, null, ct)).Text;
             }

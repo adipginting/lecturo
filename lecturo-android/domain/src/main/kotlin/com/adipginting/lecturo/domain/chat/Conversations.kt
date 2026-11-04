@@ -19,17 +19,17 @@ interface Conversations {
     /** The conversations fired from one document, for picking its active chat. */
     fun observeForDocument(docId: DocumentId): Flow<List<Conversation>>
 
-    fun observe(id: Long): Flow<Conversation?>
+    fun observe(id: String): Flow<Conversation?>
 
-    suspend fun get(id: Long): Conversation?
+    suspend fun get(id: String): Conversation?
 
-    fun observeMessages(id: Long): Flow<List<Message>>
+    fun observeMessages(id: String): Flow<List<Message>>
 
     /** The messages that go into the next payload: never superseded ones. */
-    suspend fun activeMessages(id: Long): List<Message>
+    suspend fun activeMessages(id: String): List<Message>
 
     /** Appends a turn and touches the conversation. */
-    suspend fun append(id: Long, message: Message)
+    suspend fun append(id: String, message: Message)
 
     /** A conversation that has not been sent, its excerpt frozen now. */
     suspend fun createDraft(
@@ -38,30 +38,30 @@ interface Conversations {
         docId: DocumentId? = null,
         docTitle: String? = null,
         locator: String? = null,
-    ): Long
+    ): String
 
     /** A conversation sent at creation, for a chat with no draft stage. */
     suspend fun create(
         provider: ProviderId,
         excerpt: Excerpt,
-        promptId: Long? = null,
+        promptId: String? = null,
         customPrompt: String? = null,
         docId: DocumentId? = null,
         docTitle: String? = null,
         locator: String? = null,
-    ): Long
+    ): String
 
     /** Sending the first message is what turns a draft into a conversation. */
-    suspend fun send(id: Long, firstMessage: String)
+    suspend fun send(id: String, firstMessage: String)
 
     /** A name with nothing in it is refused. */
-    suspend fun rename(id: Long, title: String)
+    suspend fun rename(id: String, title: String)
 
-    suspend fun setProvider(id: Long, provider: ProviderId)
+    suspend fun setProvider(id: String, provider: ProviderId)
 
-    suspend fun recordUsage(id: Long, promptTokens: Int?, completionTokens: Int?)
+    suspend fun recordUsage(id: String, promptTokens: Int?, completionTokens: Int?)
 
-    suspend fun compact(id: Long, summary: String)
+    suspend fun compact(id: String, summary: String)
 
-    suspend fun delete(id: Long, keepImages: Boolean = false)
+    suspend fun delete(id: String, keepImages: Boolean = false)
 }

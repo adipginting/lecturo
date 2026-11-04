@@ -1,0 +1,91 @@
+%% Lecturo Android Room schema — version 1 (single baseline)
+%% Every generated primary key is a UUIDv7 string (the client mints it before
+%% insert). `skills.id` is the exception: the catalog owns that identity.
+%% No @ForeignKey constraints are declared; relationships are logical only.
+erDiagram
+    documents {
+        TEXT id PK "uuid v7"
+        TEXT title
+        TEXT fileName
+        TEXT format "pdf | epub"
+        TEXT lastLocator "opaque: page or Readium locator"
+        TEXT source "calibre | zotero"
+        TEXT remoteId
+        TEXT remoteUrl
+        INTEGER updatedAt
+    }
+
+    conversations {
+        TEXT id PK "uuid v7"
+        TEXT title
+        TEXT providerId
+        TEXT promptId "nullable"
+        TEXT customPrompt
+        TEXT contextText "the frozen excerpt"
+        TEXT contextImagePath "screenshot context"
+        TEXT docId "nullable"
+        TEXT docTitle
+        TEXT docLocator
+        INTEGER lastPromptTokens
+        INTEGER lastCompletionTokens
+        INTEGER lastCallAt
+        INTEGER createdAt
+        INTEGER updatedAt
+        INTEGER sentAt "NULL = draft"
+    }
+
+    messages {
+        TEXT id PK "uuid v7"
+        TEXT conversationId "logical FK"
+        TEXT role "user | assistant"
+        TEXT text
+        TEXT imagePath
+        INTEGER isSummary
+        INTEGER superseded "folded by compaction"
+        INTEGER createdAt
+    }
+
+    prompts {
+        TEXT id PK "uuid v7"
+        TEXT title
+        TEXT body
+    }
+
+    skills {
+        TEXT id PK "catalog-defined"
+        TEXT name
+        TEXT description
+        TEXT author
+        TEXT version
+        TEXT scope "message | conversation | book"
+        TEXT trigger "manual | on-save"
+        TEXT template
+        TEXT price
+        TEXT catalogUrl
+        INTEGER installedAt
+    }
+
+    book_skills {
+        TEXT docId PK
+        TEXT skillId PK
+        INTEGER appliedAt
+    }
+
+    skill_runs {
+        TEXT id PK "uuid v7"
+        TEXT docId "logical FK"
+        TEXT skillId "logical FK"
+        TEXT status "running | done | failed"
+        TEXT result
+        TEXT error
+        INTEGER startedAt
+        INTEGER finishedAt
+    }
+
+    documents |o..o{ conversations : "docId (logical, nullable - chats outlive the book)"
+    prompts   |o..o{ conversations : "promptId (logical, nullable)"
+    conversations ||..o{ messages  : "conversationId (logical; deleted by hand)"
+    documents ||..o{ book_skills  : "docId (logical)"
+    skills    ||..o{ book_skills  : "skillId (logical)"
+    documents ||..o{ skill_runs   : "docId (logical)"
+    skills    ||..o{ skill_runs   : "skillId (logical)"

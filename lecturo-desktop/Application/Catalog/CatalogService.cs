@@ -38,7 +38,7 @@ public sealed class CatalogService
     public HashSet<string> DownloadedKeys() => _provenance.DownloadedKeys();
 
     /// <summary>The local document a remote item was downloaded into, if any.</summary>
-    public long? FindDocumentId(string source, string remoteId) => _provenance.FindDocumentId(source, remoteId);
+    public string? FindDocumentId(string source, string remoteId) => _provenance.FindDocumentId(source, remoteId);
 
     /// <summary>
     /// Downloads an item through its source, stores it in the local library and

@@ -1,7 +1,7 @@
 # GitLab CI/CD for the Lecturo monorepo.
 #
 # Mirrors .github/workflows/ci.yml and .github/workflows/deploy.yml:
-#   test   — web, server, openapi and relay, path-filtered to what changed
+#   test   — web, server, openapi, relay, android and desktop, path-filtered to what changed
 #   build  — build and push both images to Docker Hub (main only)
 #   deploy — roll the new images out to k3s (main only)
 #
@@ -59,7 +59,7 @@ server:test:
         - lecturo-web/Dockerfile
         - .gitlab-ci.yml
   services:
-    - postgres:15
+    - postgres:18
   variables:
     POSTGRES_DB: lecturo
     POSTGRES_USER: postgres
@@ -109,6 +109,39 @@ relay:test:
       - .gradle-home/
   script:
     - ./gradlew -p lecturo-relay test --no-daemon
+
+# Needs a runner image carrying the Android SDK + JDK 21 (the SDK cannot be
+# installed per-run the way the other jobs install their toolchains).
+android:test:
+  stage: test
+  image: ghcr.io/cirruslabs/android-sdk:36
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-android/**
+        - .gitlab-ci.yml
+  variables:
+    GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle-home"
+  cache:
+    key: gradle-android
+    paths:
+      - .gradle-home/
+  before_script:
+    - cd lecturo-android
+  script:
+    # JVM unit tests only; no emulator is needed.
+    - ./gradlew :domain:test :app:testDebugUnitTest --no-daemon
+
+desktop:test:
+  stage: test
+  image: mcr.microsoft.com/dotnet/sdk:10.0
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH'
+      changes:
+        - lecturo-desktop/**
+        - .gitlab-ci.yml
+  script:
+    - dotnet test lecturo-desktop/Tests/Lecturo.Tests.csproj
 
 # --- build -------------------------------------------------------------------
 

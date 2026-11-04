@@ -10,8 +10,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
+import com.adipginting.lecturo.domain.shared.uuidV7
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "documents")
@@ -53,11 +52,11 @@ interface DocumentDao {
 
 @Entity(tableName = "conversations")
 data class ConversationEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val id: String,
     val title: String,
     val providerId: String,
     /** Saved prompt chosen at conversation start; locked thereafter. */
-    val promptId: Long? = null,
+    val promptId: String? = null,
     /** One-off prompt typed at conversation start, when no saved prompt is used. */
     val customPrompt: String? = null,
     /** Excerpt fired from the saved text or the reader to seed this conversation's context. */
@@ -82,8 +81,8 @@ data class ConversationEntity(
 
 @Entity(tableName = "messages")
 data class MessageEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val conversationId: Long,
+    @PrimaryKey val id: String,
+    val conversationId: String,
     /** "user" or "assistant". */
     val role: String,
     val text: String,
@@ -98,7 +97,7 @@ data class MessageEntity(
 
 @Entity(tableName = "prompts")
 data class PromptEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val id: String,
     val title: String,
     val body: String,
 )
@@ -139,7 +138,7 @@ data class BookSkillEntity(
 /** One background run of a skill over a book, and what it produced. */
 @Entity(tableName = "skill_runs")
 data class SkillRunEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey val id: String,
     val docId: String,
     val skillId: String,
     /** "running", "done" or "failed". */
@@ -164,72 +163,72 @@ interface ConversationDao {
     fun observeSent(): Flow<List<ConversationEntity>>
 
     @Query("UPDATE conversations SET sentAt = :at, updatedAt = :at WHERE id = :id")
-    suspend fun markSent(id: Long, at: Long)
+    suspend fun markSent(id: String, at: Long)
 
     @Query("SELECT * FROM conversations WHERE docId = :docId")
     fun observeForDoc(docId: String): Flow<List<ConversationEntity>>
 
     @Query("SELECT * FROM conversations WHERE id = :id")
-    suspend fun get(id: Long): ConversationEntity?
+    suspend fun get(id: String): ConversationEntity?
 
     @Query("SELECT * FROM conversations WHERE id = :id")
-    fun observe(id: Long): Flow<ConversationEntity?>
+    fun observe(id: String): Flow<ConversationEntity?>
 
     @Insert
-    suspend fun insert(conversation: ConversationEntity): Long
+    suspend fun insert(conversation: ConversationEntity)
 
     @Query("UPDATE conversations SET title = :title WHERE id = :id")
-    suspend fun rename(id: Long, title: String)
+    suspend fun rename(id: String, title: String)
 
     @Query("UPDATE conversations SET providerId = :providerId WHERE id = :id")
-    suspend fun setProvider(id: Long, providerId: String)
+    suspend fun setProvider(id: String, providerId: String)
 
     @Query("UPDATE conversations SET updatedAt = :updatedAt WHERE id = :id")
-    suspend fun touch(id: Long, updatedAt: Long)
+    suspend fun touch(id: String, updatedAt: Long)
 
     @Query(
         "UPDATE conversations SET lastPromptTokens = :promptTokens, " +
             "lastCompletionTokens = :completionTokens, lastCallAt = :callAt WHERE id = :id",
     )
-    suspend fun recordUsage(id: Long, promptTokens: Int?, completionTokens: Int?, callAt: Long)
+    suspend fun recordUsage(id: String, promptTokens: Int?, completionTokens: Int?, callAt: Long)
 
     @Query(
         "UPDATE conversations SET lastPromptTokens = NULL, " +
             "lastCompletionTokens = NULL, lastCallAt = NULL WHERE id = :id",
     )
-    suspend fun clearUsage(id: Long)
+    suspend fun clearUsage(id: String)
 
     @Query("DELETE FROM conversations WHERE id = :id")
-    suspend fun delete(id: Long)
+    suspend fun delete(id: String)
 }
 
 @Dao
 interface MessageDao {
     @Query("SELECT * FROM messages WHERE conversationId = :conversationId ORDER BY createdAt, id")
-    fun observeFor(conversationId: Long): Flow<List<MessageEntity>>
+    fun observeFor(conversationId: String): Flow<List<MessageEntity>>
 
     /** The payload-eligible messages: everything compaction has not superseded. */
     @Query(
         "SELECT * FROM messages WHERE conversationId = :conversationId " +
             "AND superseded = 0 ORDER BY createdAt, id",
     )
-    suspend fun getActiveFor(conversationId: Long): List<MessageEntity>
+    suspend fun getActiveFor(conversationId: String): List<MessageEntity>
 
     @Insert
     suspend fun insert(message: MessageEntity)
 
     @Query("UPDATE messages SET superseded = 1 WHERE conversationId = :conversationId AND superseded = 0")
-    suspend fun supersedeActive(conversationId: Long)
+    suspend fun supersedeActive(conversationId: String)
 
     @Query("DELETE FROM messages WHERE conversationId = :conversationId")
-    suspend fun deleteFor(conversationId: Long)
+    suspend fun deleteFor(conversationId: String)
 
     /** Image files this conversation's rows point at, for cleanup on delete. */
     @Query(
         "SELECT imagePath FROM messages WHERE conversationId = :conversationId " +
             "AND imagePath IS NOT NULL",
     )
-    suspend fun imagePathsFor(conversationId: Long): List<String>
+    suspend fun imagePathsFor(conversationId: String): List<String>
 }
 
 @Dao
@@ -238,13 +237,13 @@ interface PromptDao {
     fun observeAll(): Flow<List<PromptEntity>>
 
     @Query("SELECT * FROM prompts WHERE id = :id")
-    suspend fun get(id: Long): PromptEntity?
+    suspend fun get(id: String): PromptEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(prompt: PromptEntity): Long
+    suspend fun upsert(prompt: PromptEntity)
 
     @Query("DELETE FROM prompts WHERE id = :id")
-    suspend fun delete(id: Long)
+    suspend fun delete(id: String)
 }
 
 @Dao
@@ -286,13 +285,13 @@ interface SkillRunDao {
     suspend fun deleteForDoc(docId: String)
 
     @Insert
-    suspend fun insert(run: SkillRunEntity): Long
+    suspend fun insert(run: SkillRunEntity)
 
     @Query(
         "UPDATE skill_runs SET status = :status, result = :result, error = :error, " +
             "finishedAt = :finishedAt WHERE id = :id",
     )
-    suspend fun finish(id: Long, status: String, result: String?, error: String?, finishedAt: Long)
+    suspend fun finish(id: String, status: String, result: String?, error: String?, finishedAt: Long)
 }
 
 @Database(
@@ -305,7 +304,7 @@ interface SkillRunDao {
         BookSkillEntity::class,
         SkillRunEntity::class,
     ],
-    version = 13,
+    version = 1,
     exportSchema = false,
 )
 abstract class LecturoDatabase : RoomDatabase() {
@@ -321,176 +320,17 @@ abstract class LecturoDatabase : RoomDatabase() {
         @Volatile
         private var instance: LecturoDatabase? = null
 
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `basket_items` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "`docId` TEXT NOT NULL, `text` TEXT NOT NULL, " +
-                        "`locator` TEXT, `createdAt` INTEGER NOT NULL)",
-                )
-            }
-        }
-
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `conversations` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "`title` TEXT NOT NULL, `providerId` TEXT NOT NULL, " +
-                        "`promptId` INTEGER, `createdAt` INTEGER NOT NULL, " +
-                        "`updatedAt` INTEGER NOT NULL)",
-                )
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `messages` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "`conversationId` INTEGER NOT NULL, `role` TEXT NOT NULL, " +
-                        "`text` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)",
-                )
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `prompts` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                        "`title` TEXT NOT NULL, `body` TEXT NOT NULL)",
-                )
-            }
-        }
-
-        private val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `customPrompt` TEXT")
-            }
-        }
-
-        private val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `contextText` TEXT")
-            }
-        }
-
-        private val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docTitle` TEXT")
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docLocator` TEXT")
-            }
-        }
-
-        private val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `docId` TEXT")
-            }
-        }
-
-        private val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `lastPromptTokens` INTEGER")
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `lastCompletionTokens` INTEGER")
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `lastCallAt` INTEGER")
-                db.execSQL("ALTER TABLE `messages` ADD COLUMN `isSummary` INTEGER NOT NULL DEFAULT 0")
-                db.execSQL("ALTER TABLE `messages` ADD COLUMN `superseded` INTEGER NOT NULL DEFAULT 0")
-            }
-        }
-
-        private val MIGRATION_8_9 = object : Migration(8, 9) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `contextImagePath` TEXT")
-                db.execSQL("ALTER TABLE `messages` ADD COLUMN `imagePath` TEXT")
-            }
-        }
-
-        private val MIGRATION_9_10 = object : Migration(9, 10) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `documents` ADD COLUMN `source` TEXT")
-                db.execSQL("ALTER TABLE `documents` ADD COLUMN `remoteId` TEXT")
-                db.execSQL("ALTER TABLE `documents` ADD COLUMN `remoteUrl` TEXT")
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `skills` (" +
-                        "`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT NOT NULL, " +
-                        "`author` TEXT, `version` TEXT NOT NULL, `scope` TEXT NOT NULL, " +
-                        "`trigger` TEXT NOT NULL, `template` TEXT NOT NULL, `price` TEXT, " +
-                        "`catalogUrl` TEXT, `installedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
-                )
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `book_skills` (" +
-                        "`docId` TEXT NOT NULL, `skillId` TEXT NOT NULL, " +
-                        "`appliedAt` INTEGER NOT NULL, PRIMARY KEY(`docId`, `skillId`))",
-                )
-                db.execSQL(
-                    "CREATE TABLE IF NOT EXISTS `skill_runs` (" +
-                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `docId` TEXT NOT NULL, " +
-                        "`skillId` TEXT NOT NULL, `status` TEXT NOT NULL, `result` TEXT, " +
-                        "`error` TEXT, `startedAt` INTEGER NOT NULL, `finishedAt` INTEGER)",
-                )
-            }
-        }
-
-        private val MIGRATION_10_11 = object : Migration(10, 11) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE `conversations` ADD COLUMN `sentAt` INTEGER")
-                // Saved excerpts were a queue of things to ask about. A draft is
-                // that same thing said properly: a conversation not yet sent.
-                db.execSQL(
-                    "INSERT INTO `conversations` " +
-                        "(`title`, `providerId`, `promptId`, `customPrompt`, `contextText`, " +
-                        "`docId`, `docTitle`, `docLocator`, `createdAt`, `updatedAt`, `sentAt`) " +
-                        "SELECT 'New conversation', 'openai', NULL, NULL, b.`text`, b.`docId`, " +
-                        "d.`title`, b.`locator`, b.`createdAt`, b.`createdAt`, NULL " +
-                        "FROM `basket_items` b LEFT JOIN `documents` d ON d.`id` = b.`docId`",
-                )
-            }
-        }
-
-        /**
-         * 11 → 12: the move to drafts was applied to the wrong half of the table.
-         * Turning saved items into drafts set `sentAt` null for them — correct — but
-         * every conversation that already existed kept a null `sentAt` too, so chats
-         * that had been answered for weeks were listed under Drafts.
-         *
-         * A conversation that has messages was sent; there is no other way for one to
-         * come to exist. A draft that never got a reply has none, and stays a draft.
-         */
-        private val MIGRATION_11_12 = object : Migration(11, 12) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    "UPDATE `conversations` SET `sentAt` = " +
-                        "CASE WHEN `updatedAt` = 0 THEN `createdAt` ELSE `updatedAt` END " +
-                        "WHERE `sentAt` IS NULL AND `id` IN " +
-                        "(SELECT `conversationId` FROM `messages`)",
-                )
-            }
-        }
-
-        /**
-         * 12 → 13: the saved queue is gone. A draft is a conversation that has not
-         * been sent, and every saved excerpt became one when `sentAt` arrived, so
-         * the table has had no writer since — it is dropped rather than left
-         * behind as a lie in the schema.
-         */
-        private val MIGRATION_12_13 = object : Migration(12, 13) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("DROP TABLE IF EXISTS `basket_items`")
-            }
-        }
-
         fun get(context: Context): LecturoDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     LecturoDatabase::class.java,
                     "lecturo.db",
-                ).addMigrations(
-                    MIGRATION_1_2,
-                    MIGRATION_2_3,
-                    MIGRATION_3_4,
-                    MIGRATION_4_5,
-                    MIGRATION_5_6,
-                    MIGRATION_6_7,
-                    MIGRATION_7_8,
-                    MIGRATION_8_9,
-                    MIGRATION_9_10,
-                    MIGRATION_10_11,
-                    MIGRATION_11_12,
-                    MIGRATION_12_13,
                 )
+                    // Pre-release: the schema was reset to a single baseline, so
+                    // any older database is dropped and recreated rather than
+                    // migrated. Remove this before the first release.
+                    .fallbackToDestructiveMigration(dropAllTables = true)
                     .build().also { instance = it }
             }
     }

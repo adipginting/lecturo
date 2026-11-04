@@ -13,7 +13,7 @@ import org.junit.Test
 class ConversationTest {
 
     private fun draft() = Conversation.draft(
-        id = 1L,
+        id = "1",
         providerId = "deepseek",
         docId = "doc",
         excerpt = Excerpt.text("the passage"),

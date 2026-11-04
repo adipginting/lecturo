@@ -9,6 +9,7 @@ package com.adipginting.lecturo.domain.chat
  */
 fun activeConversation(conversations: List<Conversation>): Conversation? =
     conversations
+
         .filter { !it.isDraft }
         .maxWithOrNull(compareBy({ it.updatedAt }, { it.id }))
 

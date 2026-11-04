@@ -12,7 +12,7 @@ import org.junit.Test
 class SystemPromptTest {
 
     private fun conversation(excerpt: String? = null) = Conversation(
-        id = 1,
+        id = "1",
         title = "Chat",
         providerId = "deepseek",
         excerpt = Excerpt(text = excerpt),

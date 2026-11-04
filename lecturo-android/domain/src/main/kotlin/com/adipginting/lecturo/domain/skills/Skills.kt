@@ -23,7 +23,7 @@ interface Skills {
     /** The runs recorded against one book, newest first. */
     fun observeRuns(docId: String): Flow<List<Insight>>
 
-    suspend fun startRun(docId: String, skillId: String): Long
+    suspend fun startRun(docId: String, skillId: String): String
 
-    suspend fun finishRun(id: Long, result: String?, error: String?)
+    suspend fun finishRun(id: String, result: String?, error: String?)
 }

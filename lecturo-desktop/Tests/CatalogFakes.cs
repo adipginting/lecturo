@@ -5,19 +5,19 @@ namespace Lecturo.Tests;
 
 internal sealed class FakeProvenanceRepository : IProvenanceRepository
 {
-    private readonly List<(long DocumentId, string Source, string RemoteId, string Url, string Title)> _rows = new();
+    private readonly List<(string DocumentId, string Source, string RemoteId, string Url, string Title)> _rows = new();
 
-    public long Add(long documentId, string source, string remoteId, string url, string title)
+    public string Add(string documentId, string source, string remoteId, string url, string title)
     {
         _rows.Add((documentId, source, remoteId, url, title));
-        return _rows.Count;
+        return _rows.Count.ToString();
     }
 
     public HashSet<string> DownloadedKeys() =>
         _rows.Select(r => Provenance.Key(r.Source, r.RemoteId)).ToHashSet();
 
-    public long? FindDocumentId(string source, string remoteId) =>
-        _rows.LastOrDefault(r => r.Source == source && r.RemoteId == remoteId) is { DocumentId: > 0 } row
+    public string? FindDocumentId(string source, string remoteId) =>
+        _rows.LastOrDefault(r => r.Source == source && r.RemoteId == remoteId) is { DocumentId: not null } row
             ? row.DocumentId
             : null;
 }

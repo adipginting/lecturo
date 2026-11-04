@@ -6,8 +6,8 @@ namespace Lecturo.Application.Library;
 public interface IDocumentRepository
 {
     List<Document> List();
-    Document? Get(long id);
-    long Add(string title, string fileName, DocumentFormat format);
-    void UpdateLocator(long id, string locator);
-    void Delete(long id);
+    Document? Get(string id);
+    string Add(string title, string fileName, DocumentFormat format);
+    void UpdateLocator(string id, string locator);
+    void Delete(string id);
 }

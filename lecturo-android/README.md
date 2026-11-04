@@ -64,7 +64,7 @@ Requires the Android SDK (a `local.properties` with `sdk.dir`, or the
 
 ```sh
 ./gradlew :app:assembleDebug       # build debug APK
-./gradlew :app:testDebugUnitTest   # 138 unit tests, green
+./gradlew :app:testDebugUnitTest   # 157 unit tests, green
 cd ../lecturo-relay && ../gradlew test   # the relay's 10 tests, green
 ```
 

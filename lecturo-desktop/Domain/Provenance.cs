@@ -5,8 +5,8 @@ namespace Lecturo.Domain;
 /// what lets a remote list mark an item as already local.
 /// </summary>
 public sealed record Provenance(
-    long Id,
-    long DocumentId,
+    string Id,
+    string DocumentId,
     string Source,
     string RemoteId,
     string Url,

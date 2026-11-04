@@ -20,7 +20,7 @@ dotnet run
 beside it. The tests are their own project:
 
 ```sh
-dotnet test Tests        # 25 tests: the domain rules and the schema migrations
+dotnet test Tests        # 78 tests: the domain rules and the use cases
 ```
 
 Three projects, no solution file, so each command names what it builds:
@@ -52,7 +52,7 @@ The database and library live under the XDG dirs:
 ```
 ~/.config/lecturo/settings.json      non-secret settings
 ~/.config/lecturo/secrets.enc        secret fallback when libsecret is unavailable
-~/.local/share/lecturo/lecturo.db    SQLite (schema v8)
+~/.local/share/lecturo/lecturo.db    SQLite (schema v1)
 ~/.local/share/lecturo/documents/    app-owned document copies
 ~/.local/share/lecturo/covers/       cached covers
 ~/.local/share/lecturo/chat_images/  screenshot contexts

@@ -41,7 +41,7 @@ func (s *Store) Create(ctx context.Context, in appdocuments.CreateInput) (Docume
 		return Document{}, ErrNotABook
 	}
 
-	id := uuid.NewString()
+	id := uuid.Must(uuid.NewV7()).String()
 	key := fmt.Sprintf("documents/%s/%s.%s", in.UserID, id, format)
 
 	if err := s.Blob.Put(ctx, key, bytes.NewReader(in.Data), int64(len(in.Data)), contentType(format)); err != nil {

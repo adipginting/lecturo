@@ -42,7 +42,7 @@ func (s *Store) Create(ctx context.Context, userID string, data []byte) (Image, 
 		return Image{}, ErrNotAnImage
 	}
 
-	id := uuid.NewString()
+	id := uuid.Must(uuid.NewV7()).String()
 	ext := extension(contentType)
 	key := fmt.Sprintf("images/%s/%s.%s", userID, id, ext)
 

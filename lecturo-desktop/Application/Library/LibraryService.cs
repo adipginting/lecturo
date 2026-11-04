@@ -23,7 +23,7 @@ public sealed class LibraryService
 
     public IReadOnlyList<Document> List() => _documents.List();
 
-    public Document? Get(long id) => _documents.Get(id);
+    public Document? Get(string id) => _documents.Get(id);
 
     public string GetPath(Document doc) => _files.PathFor(doc.FileName);
 
@@ -84,11 +84,11 @@ public sealed class LibraryService
     }
 
     /// <summary>Remembers where the reader left off, so opening resumes there.</summary>
-    public void UpdateLocator(long id, string locator) => _documents.UpdateLocator(id, locator);
+    public void UpdateLocator(string id, string locator) => _documents.UpdateLocator(id, locator);
 
     private Document Store(byte[] bytes, string title, DocumentFormat format)
     {
-        var fileName = $"{Guid.NewGuid():N}.{format.ToStoredValue()}";
+        var fileName = $"{UuidV7.New()}.{format.ToStoredValue()}";
         _files.Write(fileName, bytes);
         var id = _documents.Add(title, fileName, format);
         return _documents.Get(id)!;

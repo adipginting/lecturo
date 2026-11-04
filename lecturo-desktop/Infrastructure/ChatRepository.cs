@@ -48,7 +48,7 @@ public sealed class ChatRepository : IConversationRepository
         return result;
     }
 
-    public Conversation? Get(long id)
+    public Conversation? Get(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -59,7 +59,7 @@ public sealed class ChatRepository : IConversationRepository
     }
 
     /// <summary>The document's newest unsent draft, if it has one.</summary>
-    public Conversation? FindDraftForDocument(long documentId)
+    public Conversation? FindDraftForDocument(string documentId)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -74,7 +74,7 @@ public sealed class ChatRepository : IConversationRepository
     }
 
     /// <summary>The sent conversation fired from this document that was engaged with most recently.</summary>
-    public Conversation? FindActiveConversationForDocument(long documentId)
+    public Conversation? FindActiveConversationForDocument(string documentId)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -92,12 +92,12 @@ public sealed class ChatRepository : IConversationRepository
     /// Records a freshly captured excerpt as a draft. Asking about a passage makes
     /// one of these and nothing more: it is a conversation only once it is sent.
     /// </summary>
-    public long CreateDraft(
+    public string CreateDraft(
         Excerpt excerpt,
         string locator,
         string provider,
-        long? documentId = null,
-        long? promptId = null,
+        string? documentId = null,
+        string? promptId = null,
         string systemPrompt = "") =>
         Insert(ConversationTitle.Untitled, excerpt, locator, provider, documentId, promptId, systemPrompt, sentAt: null);
 
@@ -105,37 +105,38 @@ public sealed class ChatRepository : IConversationRepository
     /// Records a conversation that arrives already answered — a skill run does its
     /// own asking, so its result is not a draft.
     /// </summary>
-    public long CreateSentConversation(
+    public string CreateSentConversation(
         string title,
         Excerpt excerpt,
         string locator,
         string provider,
         DateTime sentAt,
-        long? documentId = null,
-        long? promptId = null,
+        string? documentId = null,
+        string? promptId = null,
         string systemPrompt = "") =>
         Insert(title, excerpt, locator, provider, documentId, promptId, systemPrompt, sentAt);
 
-    private long Insert(
+    private string Insert(
         string title,
         Excerpt excerpt,
         string locator,
         string provider,
-        long? documentId,
-        long? promptId,
+        string? documentId,
+        string? promptId,
         string systemPrompt,
         DateTime? sentAt)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO conversations(title, prompt_id, document_id, excerpt, locator, provider,
+            INSERT INTO conversations(id, title, prompt_id, document_id, excerpt, locator, provider,
                                       context_image_path, system_prompt, created_at, updated_at, sent_at)
-            VALUES ($title, $promptId, $docId, $excerpt, $locator, $provider,
+            VALUES ($id, $title, $promptId, $docId, $excerpt, $locator, $provider,
                     $imagePath, $systemPrompt, $now, $now, $sentAt);
-            SELECT last_insert_rowid();
             """;
+        var id = UuidV7.New();
         var now = DateTime.UtcNow.ToString("O");
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$title", title);
         cmd.Parameters.AddWithValue("$promptId", (object?)promptId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$docId", (object?)documentId ?? DBNull.Value);
@@ -146,14 +147,15 @@ public sealed class ChatRepository : IConversationRepository
         cmd.Parameters.AddWithValue("$systemPrompt", systemPrompt);
         cmd.Parameters.AddWithValue("$now", now);
         cmd.Parameters.AddWithValue("$sentAt", sentAt is { } at ? at.ToUniversalTime().ToString("O") : DBNull.Value);
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 
     /// <summary>
     /// Marks a draft sent and records the name it took from its first message.
     /// Nothing else changes: the excerpt was frozen when the draft was made.
     /// </summary>
-    public void MarkSent(long id, string title, DateTime sentAt)
+    public void MarkSent(string id, string title, DateTime sentAt)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -168,7 +170,7 @@ public sealed class ChatRepository : IConversationRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void RenameConversation(long id, string title)
+    public void RenameConversation(string id, string title)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -179,7 +181,7 @@ public sealed class ChatRepository : IConversationRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void SetConversationProvider(long id, string provider)
+    public void SetConversationProvider(string id, string provider)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -190,7 +192,7 @@ public sealed class ChatRepository : IConversationRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void TouchConversation(long id)
+    public void TouchConversation(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -200,7 +202,7 @@ public sealed class ChatRepository : IConversationRepository
         cmd.ExecuteNonQuery();
     }
 
-    public void DeleteConversation(long id)
+    public void DeleteConversation(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -213,7 +215,7 @@ public sealed class ChatRepository : IConversationRepository
     /// Records what the provider said a reply cost. A missing count is stored as
     /// missing rather than zero — "we do not know" and "nothing" are different.
     /// </summary>
-    public void RecordUsage(long id, int? promptTokens, DateTime at)
+    public void RecordUsage(string id, int? promptTokens, DateTime at)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -233,7 +235,7 @@ public sealed class ChatRepository : IConversationRepository
     /// Forgets what the last reply cost. Compaction rewrites the payload the
     /// reported count described, so keeping it would mislead the counter.
     /// </summary>
-    public void ClearUsage(long id)
+    public void ClearUsage(string id)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -243,10 +245,10 @@ public sealed class ChatRepository : IConversationRepository
     }
 
     private static Conversation ReadConversation(SqliteDataReader r) => new(
-        Id: r.GetInt64(0),
+        Id: r.GetString(0),
         Title: r.GetString(1),
-        PromptId: r.IsDBNull(2) ? null : r.GetInt64(2),
-        DocumentId: r.IsDBNull(3) ? null : r.GetInt64(3),
+        PromptId: r.IsDBNull(2) ? null : r.GetString(2),
+        DocumentId: r.IsDBNull(3) ? null : r.GetString(3),
         DocumentTitle: r.IsDBNull(4) ? null : r.GetString(4),
         Excerpt: new Excerpt(NullIfEmpty(r.GetString(5)), NullIfEmpty(r.GetString(6))),
         Locator: r.GetString(7),
@@ -266,7 +268,7 @@ public sealed class ChatRepository : IConversationRepository
 
     // ---- Messages ----
 
-    public List<Message> ListMessages(long conversationId)
+    public List<Message> ListMessages(string conversationId)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -280,8 +282,8 @@ public sealed class ChatRepository : IConversationRepository
         while (reader.Read())
         {
             result.Add(new Message(
-                reader.GetInt64(0),
-                reader.GetInt64(1),
+                reader.GetString(0),
+                reader.GetString(1),
                 MessageRoleExtensions.ParseStoredValue(reader.GetString(2)),
                 reader.GetString(3),
                 Time(reader.GetString(4)),
@@ -290,7 +292,7 @@ public sealed class ChatRepository : IConversationRepository
         return result;
     }
 
-    public void MarkSuperseded(IReadOnlyCollection<long> messageIds)
+    public void MarkSuperseded(IReadOnlyCollection<string> messageIds)
     {
         if (messageIds.Count == 0)
             return;
@@ -305,19 +307,21 @@ public sealed class ChatRepository : IConversationRepository
         cmd.ExecuteNonQuery();
     }
 
-    public long AddMessage(long conversationId, MessageRole role, string content)
+    public string AddMessage(string conversationId, MessageRole role, string content)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO messages(conversation_id, role, content, created_at)
-            VALUES ($convId, $role, $content, $now);
-            SELECT last_insert_rowid();
+            INSERT INTO messages(id, conversation_id, role, content, created_at)
+            VALUES ($id, $convId, $role, $content, $now);
             """;
+        var id = UuidV7.New();
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$convId", conversationId);
         cmd.Parameters.AddWithValue("$role", role.ToStoredValue());
         cmd.Parameters.AddWithValue("$content", content);
         cmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 }

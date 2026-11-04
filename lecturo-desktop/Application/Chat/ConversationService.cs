@@ -16,7 +16,7 @@ public sealed record SendResult(
 /// <summary>What one compaction did, for the caller to render. <see cref="Error"/> is set instead of throwing.</summary>
 public sealed record CompactResult(
     Message? Summary,
-    IReadOnlyList<long> SupersededIds,
+    IReadOnlyList<string> SupersededIds,
     string? Error)
 {
     public bool NothingToCompact => Summary is null && Error is null;
@@ -58,42 +58,42 @@ public sealed class ConversationService
 
     public IReadOnlyList<Conversation> ListConversations() => _conversations.ListConversations();
 
-    public Conversation? Get(long id) => _conversations.Get(id);
+    public Conversation? Get(string id) => _conversations.Get(id);
 
-    public Conversation? DraftForDocument(long documentId) => _conversations.FindDraftForDocument(documentId);
+    public Conversation? DraftForDocument(string documentId) => _conversations.FindDraftForDocument(documentId);
 
-    public Conversation? ActiveForDocument(long documentId) => _conversations.FindActiveConversationForDocument(documentId);
+    public Conversation? ActiveForDocument(string documentId) => _conversations.FindActiveConversationForDocument(documentId);
 
-    public IReadOnlyList<Message> Messages(long conversationId) => _conversations.ListMessages(conversationId);
+    public IReadOnlyList<Message> Messages(string conversationId) => _conversations.ListMessages(conversationId);
 
     // ---- The life of a conversation ----
 
     /// <summary>Records a freshly captured excerpt as a draft, and nothing more.</summary>
-    public long CreateDraft(
+    public string CreateDraft(
         Excerpt excerpt,
         string locator,
         string provider,
-        long? documentId = null,
-        long? promptId = null,
+        string? documentId = null,
+        string? promptId = null,
         string systemPrompt = "") =>
         _conversations.CreateDraft(excerpt, locator, provider, documentId, promptId, systemPrompt);
 
     /// <summary>Records a conversation that arrives already answered — a skill run.</summary>
-    public long CreateSentConversation(
+    public string CreateSentConversation(
         string title,
         Excerpt excerpt,
         string locator,
         string provider,
         DateTime sentAt,
-        long? documentId = null,
-        long? promptId = null,
+        string? documentId = null,
+        string? promptId = null,
         string systemPrompt = "") =>
         _conversations.CreateSentConversation(title, excerpt, locator, provider, sentAt, documentId, promptId, systemPrompt);
 
-    public void Delete(long id) => _conversations.DeleteConversation(id);
+    public void Delete(string id) => _conversations.DeleteConversation(id);
 
     /// <summary>A name with nothing in it is refused; <c>null</c> says so.</summary>
-    public Conversation? Rename(long id, string name)
+    public Conversation? Rename(string id, string name)
     {
         if (ConversationTitle.Normalize(name) is not { } clean)
             return null;
@@ -101,18 +101,18 @@ public sealed class ConversationService
         return _conversations.Get(id);
     }
 
-    public void SwitchProvider(long id, string provider) =>
+    public void SwitchProvider(string id, string provider) =>
         _conversations.SetConversationProvider(id, provider);
 
     /// <summary>Adds a turn directly — for a run that has already been answered.</summary>
-    public Message AppendMessage(long conversationId, MessageRole role, string content)
+    public Message AppendMessage(string conversationId, MessageRole role, string content)
     {
         var id = _conversations.AddMessage(conversationId, role, content);
         return new Message(id, conversationId, role, content, DateTime.UtcNow);
     }
 
     /// <summary>Marks a conversation as engaged with, so it sorts as the current one.</summary>
-    public void Touch(long id) => _conversations.TouchConversation(id);
+    public void Touch(string id) => _conversations.TouchConversation(id);
 
     /// <summary>
     /// Sends a message. The reply is what sends a draft, names it and moves it
@@ -120,7 +120,7 @@ public sealed class ConversationService
     /// draft unsent, so retrying sends it rather than rolling anything back.
     /// </summary>
     public async Task<SendResult> SendAsync(
-        long conversationId,
+        string conversationId,
         string providerId,
         string text,
         CancellationToken ct = default)
@@ -169,13 +169,13 @@ public sealed class ConversationService
     /// into <see cref="CompactResult.Error"/> and must not cost the reader a turn.
     /// </summary>
     public async Task<CompactResult> CompactAsync(
-        long conversationId,
+        string conversationId,
         string providerId,
         CancellationToken ct = default)
     {
         var active = ActiveConversationTurns(conversationId);
         if (active.Count < MinimumTurnsToCompact)
-            return new CompactResult(null, Array.Empty<long>(), null);
+            return new CompactResult(null, Array.Empty<string>(), null);
 
         try
         {
@@ -189,7 +189,7 @@ public sealed class ConversationService
         }
         catch (Exception ex)
         {
-            return new CompactResult(null, Array.Empty<long>(), ex.Message);
+            return new CompactResult(null, Array.Empty<string>(), ex.Message);
         }
     }
 
@@ -229,15 +229,15 @@ public sealed class ConversationService
     }
 
     /// <summary>What the next call sends: the summary plus every non-superseded turn.</summary>
-    public IReadOnlyList<Message> ActiveHistory(long conversationId) =>
+    public IReadOnlyList<Message> ActiveHistory(string conversationId) =>
         _conversations.ListMessages(conversationId).Where(m => m.IsActive).ToList();
 
-    private IReadOnlyList<Message> ActiveConversationTurns(long conversationId) =>
+    private IReadOnlyList<Message> ActiveConversationTurns(string conversationId) =>
         _conversations.ListMessages(conversationId)
             .Where(m => m.IsActive && m.Role != MessageRole.Summary)
             .ToList();
 
-    private Message Persist(long conversationId, MessageRole role, string content, DateTime at)
+    private Message Persist(string conversationId, MessageRole role, string content, DateTime at)
     {
         var id = _conversations.AddMessage(conversationId, role, content);
         return new Message(id, conversationId, role, content, at);

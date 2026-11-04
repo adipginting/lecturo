@@ -23,38 +23,38 @@ class ReaderPanelStateTest {
     @Test
     fun `asking about a selection opens the draft from wherever you were`() {
         panel.openChats()
-        panel.openDraft(1)
-        assertEquals(PanelMode.Draft(1), panel.mode)
+        panel.openDraft("1")
+        assertEquals(PanelMode.Draft("1"), panel.mode)
 
-        panel.openConversation(7)
-        panel.openDraft(2)
-        assertEquals(PanelMode.Draft(2), panel.mode)
+        panel.openConversation("7")
+        panel.openDraft("2")
+        assertEquals(PanelMode.Draft("2"), panel.mode)
     }
 
     @Test
     fun `a draft's first send becomes the conversation`() {
-        panel.openDraft(1)
-        panel.openConversation(42)
-        assertEquals(PanelMode.Conversation(42), panel.mode)
+        panel.openDraft("1")
+        panel.openConversation("42")
+        assertEquals(PanelMode.Conversation("42"), panel.mode)
     }
 
     @Test
     fun `opening the list replaces the open conversation`() {
-        panel.openConversation(1)
+        panel.openConversation("1")
         panel.openChats()
         assertEquals(PanelMode.Chats, panel.mode)
     }
 
     @Test
     fun `opening a conversation replaces the one before it`() {
-        panel.openConversation(1)
-        panel.openConversation(2)
-        assertEquals(PanelMode.Conversation(2), panel.mode)
+        panel.openConversation("1")
+        panel.openConversation("2")
+        assertEquals(PanelMode.Conversation("2"), panel.mode)
     }
 
     @Test
     fun `collapsing puts the panel away`() {
-        panel.openConversation(42)
+        panel.openConversation("42")
         panel.collapse()
         assertEquals(PanelMode.Hidden, panel.mode)
         assertFalse(panel.isOpen)

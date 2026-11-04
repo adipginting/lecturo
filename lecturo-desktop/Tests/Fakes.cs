@@ -7,8 +7,8 @@ namespace Lecturo.Tests;
 /// <summary>An in-memory <see cref="IConversationRepository"/>: no SQLite, just the aggregate's rules.</summary>
 internal sealed class FakeConversationRepository : IConversationRepository
 {
-    private readonly Dictionary<long, Conversation> _conversations = new();
-    private readonly Dictionary<long, List<Message>> _messages = new();
+    private readonly Dictionary<string, Conversation> _conversations = new();
+    private readonly Dictionary<string, List<Message>> _messages = new();
     private long _nextConversation = 1;
     private long _nextMessage = 1;
 
@@ -18,78 +18,78 @@ internal sealed class FakeConversationRepository : IConversationRepository
     public List<Conversation> ListConversations() =>
         _conversations.Values.Where(c => !c.IsDraft).OrderByDescending(c => c.UpdatedAt).ToList();
 
-    public Conversation? Get(long id) => _conversations.GetValueOrDefault(id);
+    public Conversation? Get(string id) => _conversations.GetValueOrDefault(id);
 
-    public Conversation? FindDraftForDocument(long documentId) =>
+    public Conversation? FindDraftForDocument(string documentId) =>
         _conversations.Values.Where(c => c.DocumentId == documentId && c.IsDraft)
             .OrderByDescending(c => c.CreatedAt).FirstOrDefault();
 
-    public Conversation? FindActiveConversationForDocument(long documentId) =>
+    public Conversation? FindActiveConversationForDocument(string documentId) =>
         _conversations.Values.Where(c => c.DocumentId == documentId && !c.IsDraft)
             .OrderByDescending(c => c.UpdatedAt).FirstOrDefault();
 
-    public long CreateDraft(Excerpt excerpt, string locator, string provider, long? documentId = null, long? promptId = null, string systemPrompt = "")
+    public string CreateDraft(Excerpt excerpt, string locator, string provider, string? documentId = null, string? promptId = null, string systemPrompt = "")
     {
-        var id = _nextConversation++;
+        var id = (_nextConversation++).ToString();
         _conversations[id] = Conversation.Draft(id, excerpt, locator, provider, DateTime.UtcNow, documentId, null, promptId, systemPrompt);
         _messages[id] = new List<Message>();
         return id;
     }
 
-    public long CreateSentConversation(string title, Excerpt excerpt, string locator, string provider, DateTime sentAt, long? documentId = null, long? promptId = null, string systemPrompt = "")
+    public string CreateSentConversation(string title, Excerpt excerpt, string locator, string provider, DateTime sentAt, string? documentId = null, string? promptId = null, string systemPrompt = "")
     {
-        var id = _nextConversation++;
+        var id = (_nextConversation++).ToString();
         _conversations[id] = new Conversation(id, title, excerpt, locator, provider, sentAt, sentAt, sentAt, promptId, documentId, null, systemPrompt);
         _messages[id] = new List<Message>();
         return id;
     }
 
-    public void MarkSent(long id, string title, DateTime sentAt)
+    public void MarkSent(string id, string title, DateTime sentAt)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { Title = title, SentAt = sentAt, UpdatedAt = sentAt };
     }
 
-    public void RenameConversation(long id, string title)
+    public void RenameConversation(string id, string title)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { Title = title };
     }
 
-    public void SetConversationProvider(long id, string provider)
+    public void SetConversationProvider(string id, string provider)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { Provider = provider };
     }
 
-    public void TouchConversation(long id)
+    public void TouchConversation(string id)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { UpdatedAt = DateTime.UtcNow };
     }
 
-    public void DeleteConversation(long id)
+    public void DeleteConversation(string id)
     {
         _conversations.Remove(id);
         _messages.Remove(id);
     }
 
-    public void RecordUsage(long id, int? promptTokens, DateTime at)
+    public void RecordUsage(string id, int? promptTokens, DateTime at)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { LastPromptTokens = promptTokens, LastCallAt = at };
     }
 
-    public void ClearUsage(long id)
+    public void ClearUsage(string id)
     {
         if (_conversations.TryGetValue(id, out var c))
             _conversations[id] = c with { LastPromptTokens = null, LastCallAt = null };
     }
 
-    public List<Message> ListMessages(long conversationId) =>
+    public List<Message> ListMessages(string conversationId) =>
         _messages.TryGetValue(conversationId, out var list) ? list.ToList() : new List<Message>();
 
-    public void MarkSuperseded(IReadOnlyCollection<long> messageIds)
+    public void MarkSuperseded(IReadOnlyCollection<string> messageIds)
     {
         foreach (var list in _messages.Values)
             for (var i = 0; i < list.Count; i++)
@@ -97,9 +97,9 @@ internal sealed class FakeConversationRepository : IConversationRepository
                     list[i] = list[i] with { Superseded = true };
     }
 
-    public long AddMessage(long conversationId, MessageRole role, string content)
+    public string AddMessage(string conversationId, MessageRole role, string content)
     {
-        var id = _nextMessage++;
+        var id = (_nextMessage++).ToString();
         if (!_messages.TryGetValue(conversationId, out var list))
             _messages[conversationId] = list = new List<Message>();
         list.Add(new Message(id, conversationId, role, content, DateTime.UtcNow));
@@ -115,23 +115,23 @@ internal sealed class FakePromptRepository : IPromptRepository
 
     public List<Prompt> List() => _prompts.OrderBy(p => p.Name).ToList();
 
-    public Prompt? Get(long id) => _prompts.FirstOrDefault(p => p.Id == id);
+    public Prompt? Get(string id) => _prompts.FirstOrDefault(p => p.Id == id);
 
-    public long Add(string name, string content)
+    public string Add(string name, string content)
     {
-        var id = _next++;
+        var id = (_next++).ToString();
         _prompts.Add(new Prompt(id, name, content));
         return id;
     }
 
-    public void Update(long id, string name, string content)
+    public void Update(string id, string name, string content)
     {
         var index = _prompts.FindIndex(p => p.Id == id);
         if (index >= 0)
             _prompts[index] = new Prompt(id, name, content);
     }
 
-    public void Delete(long id) => _prompts.RemoveAll(p => p.Id == id);
+    public void Delete(string id) => _prompts.RemoveAll(p => p.Id == id);
 }
 
 /// <summary>Answers with a fixed reply, or fails — the whole point of a fake provider.</summary>

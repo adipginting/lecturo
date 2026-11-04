@@ -171,7 +171,7 @@ applied one.
 ```sh
 docker run --rm -d --name lecturo-test-pg \
   -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=lecturo \
-  -p 55441:5432 postgres:15
+  -p 55441:5432 postgres:18
 
 DATABASE_URL="postgres://postgres:postgres@localhost:55441/lecturo?sslmode=disable" \
   go run .

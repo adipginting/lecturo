@@ -43,14 +43,15 @@ public sealed class SkillRepository : ISkillRepository
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO skills(skill_id, name, description, author, version, scope, trigger, prompt, price, enabled, installed_at)
-            VALUES ($id, $name, $desc, $author, $version, $scope, $trigger, $prompt, $price, 1, $now)
+            INSERT INTO skills(id, skill_id, name, description, author, version, scope, trigger, prompt, price, enabled, installed_at)
+            VALUES ($rowId, $skillId, $name, $desc, $author, $version, $scope, $trigger, $prompt, $price, 1, $now)
             ON CONFLICT(skill_id) DO UPDATE SET
                 name = excluded.name, description = excluded.description, author = excluded.author,
                 version = excluded.version, scope = excluded.scope, trigger = excluded.trigger,
                 prompt = excluded.prompt, price = excluded.price;
             """;
-        cmd.Parameters.AddWithValue("$id", skill.SkillId);
+        cmd.Parameters.AddWithValue("$rowId", UuidV7.New());
+        cmd.Parameters.AddWithValue("$skillId", skill.SkillId);
         cmd.Parameters.AddWithValue("$name", skill.Name);
         cmd.Parameters.AddWithValue("$desc", skill.Description);
         cmd.Parameters.AddWithValue("$author", skill.Author);
@@ -82,24 +83,26 @@ public sealed class SkillRepository : ISkillRepository
         cmd.ExecuteNonQuery();
     }
 
-    public long AddRun(long? documentId, Skill skill, RunStatus status)
+    public string AddRun(string? documentId, Skill skill, RunStatus status)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO skill_runs(document_id, skill_id, skill_name, status, result, error, created_at)
-            VALUES ($docId, $skillId, $name, $status, '', '', $now);
-            SELECT last_insert_rowid();
+            INSERT INTO skill_runs(id, document_id, skill_id, skill_name, status, result, error, created_at)
+            VALUES ($id, $docId, $skillId, $name, $status, '', '', $now);
             """;
+        var id = UuidV7.New();
+        cmd.Parameters.AddWithValue("$id", id);
         cmd.Parameters.AddWithValue("$docId", (object?)documentId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$skillId", skill.SkillId);
         cmd.Parameters.AddWithValue("$name", skill.Name);
         cmd.Parameters.AddWithValue("$status", status.ToStoredValue());
         cmd.Parameters.AddWithValue("$now", DateTime.UtcNow.ToString("O"));
-        return (long)(cmd.ExecuteScalar() ?? 0L);
+        cmd.ExecuteNonQuery();
+        return id;
     }
 
-    public void CompleteRun(long runId, RunStatus status, string result, string error)
+    public void CompleteRun(string runId, RunStatus status, string result, string error)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -111,7 +114,7 @@ public sealed class SkillRepository : ISkillRepository
         cmd.ExecuteNonQuery();
     }
 
-    public List<SkillRun> ListRuns(long? documentId)
+    public List<SkillRun> ListRuns(string? documentId)
     {
         using var conn = _db.Open();
         using var cmd = conn.CreateCommand();
@@ -125,8 +128,8 @@ public sealed class SkillRepository : ISkillRepository
         while (reader.Read())
         {
             result.Add(new SkillRun(
-                reader.GetInt64(0),
-                reader.IsDBNull(1) ? null : reader.GetInt64(1),
+                reader.GetString(0),
+                reader.IsDBNull(1) ? null : reader.GetString(1),
                 reader.GetString(2),
                 reader.GetString(3),
                 RunStatusExtensions.FromStoredValue(reader.GetString(4)) ?? RunStatus.Failed,
@@ -138,7 +141,7 @@ public sealed class SkillRepository : ISkillRepository
     }
 
     private static Skill ReadSkill(SqliteDataReader r) => new(
-        r.GetInt64(0),
+        r.GetString(0),
         r.GetString(1),
         r.GetString(2),
         r.GetString(3),
